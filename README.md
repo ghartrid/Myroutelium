@@ -60,7 +60,8 @@ Specifications
   ├── PHYSICAL_LAYER.md      # Adaptive mesh radio protocol spec
   ├── BIOSUBSTRATE.md        # Biological substrate spec (Hodgkin-Huxley, growth, electrodes)
   ├── ENCRYPTION.md          # Mycelium encryption spec (4-layer living cryptography)
-  └── TRANSMISSION.md        # Text + image transmission protocol spec
+  ├── TRANSMISSION.md        # Text + image transmission protocol spec
+  └── SECURITY.md            # Biological immune system spec (5 defense layers)
 
 Paper
   └── paper/myroutelium.tex  # arXiv paper (IEEE two-column, cs.NI)
@@ -159,6 +160,22 @@ An eavesdropper tapping a single hypha gets 1/N of the data, XOR-masked with a b
 
 See [ENCRYPTION.md](ENCRYPTION.md) for the full specification.
 
+## Biological Immune System
+
+Five defense layers protect the network from malicious signals:
+
+| Layer | Biological Analogue | Defense |
+|---|---|---|
+| **Spike Authentication** | Ion channel fingerprinting | Signals validated against biological response profile (amplitude, timing, Ca2+ response). Foreign signals produce wrong electrochemical cascade — detected in <5ms |
+| **Calcium Immune Burst** | Immune signaling | Defensive Ca2+ wave propagates 5x faster than data, locks down surrounding junctions |
+| **Path Quarantine** | Melanin encapsulation | Compromised segments electrically isolated (conductivity drops to ~0), traffic reroutes |
+| **Apoptosis** | Programmed cell death | Persistent threats trigger segment death. Data physically ceases to exist. Network regrows clean |
+| **ROS Purge** | Reactive oxygen species | Nuclear option: kill everything in a radius, regrow from scratch |
+
+The fundamental advantage: in digital systems, malicious and legitimate data are both just bits. In a biological system, **the medium itself authenticates** — foreign signals interact differently with the living tissue than native ones.
+
+See [SECURITY.md](SECURITY.md) for the full specification.
+
 ## Interactive Visualization
 
 Open `visualization.html` in any browser. Seven tabs:
@@ -172,6 +189,7 @@ Open `visualization.html` in any browser. Seven tabs:
 | **Text Transmission** | Type a message, watch it encode to spikes, propagate through mycelium, decode |
 | **Image Transmission** | Select/draw an image, watch pixels stream through multi-path network, reconstruct |
 | **Mycelium Encryption** | Encrypt a message, see secret sharing across 5 paths, eavesdrop to see garbled data, regrow for new key |
+| **Immune System** | Inject malicious signals, watch authentication reject them, see immune calcium bursts, quarantine, apoptosis, ROS purge |
 
 All tabs are interactive with controls for triggering events (calcium waves, failures, traffic surges, noise injection, path breaking, network regrowth).
 

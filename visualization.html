@@ -123,6 +123,7 @@ canvas { display: block; margin: 0 auto; border-radius: 8px; background: #111; b
     <div class="tab" onclick="showPanel('transmit')">Text Transmission</div>
     <div class="tab" onclick="showPanel('imgtx')">Image Transmission</div>
     <div class="tab" onclick="showPanel('encrypt')">Mycelium Encryption</div>
+    <div class="tab" onclick="showPanel('immune')">Immune System</div>
 </div>
 
 <!-- ════════ Architecture Panel ════════ -->
@@ -414,13 +415,72 @@ canvas { display: block; margin: 0 auto; border-radius: 8px; background: #111; b
     </div>
 </div>
 
+<!-- ════════ Immune System Panel ════════ -->
+<div id="immune" class="panel">
+    <canvas id="immuneCanvas" width="1000" height="500"></canvas>
+    <div class="controls">
+        <button class="btn active" onclick="immAction('run')" id="immRunBtn">Running</button>
+        <button class="btn" onclick="immAction('pause')">Pause</button>
+        <button class="btn red" onclick="immAction('attack')">Inject Malicious Signal</button>
+        <button class="btn red" onclick="immAction('flood')">Flood Attack (5x)</button>
+        <button class="btn orange" onclick="immAction('ros')">ROS Purge</button>
+        <button class="btn" onclick="immAction('reset')">Reset</button>
+    </div>
+    <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#4CAF50"></div> Healthy</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f44336"></div> Under attack</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#FF9800"></div> Lockdown</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#9C27B0"></div> Immune signal</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#795548"></div> Quarantined</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#333"></div> Dead (apoptosis)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#E91E63"></div> Regrowth tip</div>
+    </div>
+    <div style="display:flex; gap:16px; max-width:1050px; margin:8px auto;">
+        <div class="info" style="flex:1;">
+            <h3>Network Health</h3>
+            <p>
+                Health: <span class="stat" id="immHealth">100</span>%<br>
+                Segments: <span class="stat" id="immSegs">0</span> alive |
+                <span style="color:#795548;" id="immQuar">0</span> quarantined |
+                <span style="color:#f44336;" id="immDead">0</span> dead
+            </p>
+        </div>
+        <div class="info" style="flex:1;">
+            <h3>Immune Response</h3>
+            <p>
+                Threats detected: <span class="stat" id="immThreats">0</span><br>
+                Junctions locked: <span style="color:#FF9800;" id="immLocked">0</span> |
+                Immune events: <span style="color:#9C27B0;" id="immEvents">0</span>
+            </p>
+        </div>
+        <div class="info" style="flex:1;">
+            <h3>Authentication</h3>
+            <p>
+                Last auth score: <span class="stat" id="immAuthScore">-</span><br>
+                Threshold: <span id="immThresh">0.6</span> |
+                Result: <span id="immResult" style="font-weight:bold;">-</span>
+            </p>
+        </div>
+    </div>
+    <div class="info">
+        <h3>Biological Immune System — 5 Defense Layers</h3>
+        <p>
+            <strong style="color:#4CAF50;">1. Spike Authentication</strong> — signals validated against biological response fingerprint (amplitude, rise time, Ca2+ response)<br>
+            <strong style="color:#9C27B0;">2. Calcium Immune Burst</strong> — defensive signal propagates 5x faster than data, locks down surrounding junctions<br>
+            <strong style="color:#795548;">3. Path Quarantine</strong> — compromised segments isolated (melanin wall), conductivity drops to ~0<br>
+            <strong style="color:#f44336;">4. Apoptosis</strong> — persistent threats trigger programmed cell death, data physically ceases to exist<br>
+            <strong style="color:#FF9800;">5. ROS Purge</strong> — nuclear option: kill everything in a radius, regrow clean
+        </p>
+    </div>
+</div>
+
 <script>
 // ─── Tab Navigation ──────────────────────────────────────────
 function showPanel(id) {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.getElementById(id).classList.add('active');
-    const tabMap = { arch: 'Architecture', network: 'Network', radio: 'Physical', bio: 'Bio', transmit: 'Text T', imgtx: 'Image', encrypt: 'Mycelium E' };
+    const tabMap = { arch: 'Architecture', network: 'Network', radio: 'Physical', bio: 'Bio', transmit: 'Text T', imgtx: 'Image', encrypt: 'Mycelium E', immune: 'Immune' };
     document.querySelectorAll('.tab').forEach(t => {
         if (t.textContent.includes(tabMap[id] || '')) t.classList.add('active');
     });
@@ -2123,6 +2183,376 @@ function drawEncrypt() {
 
 encBuildNetwork();
 
+// ═══════════════════════════════════════════════════════════════
+// IMMUNE SYSTEM VISUALIZATION
+// ═══════════════════════════════════════════════════════════════
+const immuneCanvas = document.getElementById('immuneCanvas');
+const immuneCtx = immuneCanvas.getContext('2d');
+
+let imm = {
+    running: true,
+    junctions: [],
+    segments: [],
+    tick: 0,
+    attacks: [],          // {x, y, junctionIdx, age, detected}
+    immuneWaves: [],      // {x, y, radius, strength}
+    lockdowns: new Set(),
+    quarantined: new Set(),
+    dead: new Set(),
+    rosPurges: [],        // {x, y, radius, age}
+    regrowthTips: [],
+    stats: { threats: 0, events: 0, apoptosis: 0 },
+    lastAuth: { score: -1, detected: false },
+};
+
+function immBuildNetwork() {
+    imm.junctions = [];
+    imm.segments = [];
+    imm.lockdowns = new Set();
+    imm.quarantined = new Set();
+    imm.dead = new Set();
+    imm.attacks = [];
+    imm.immuneWaves = [];
+    imm.rosPurges = [];
+    imm.regrowthTips = [];
+    imm.stats = { threats: 0, events: 0, apoptosis: 0 };
+    imm.tick = 0;
+
+    const cx = 500, cy = 250;
+    // Dense network
+    const nRings = 4;
+    const nodesPerRing = [1, 8, 14, 20];
+    const radii = [0, 60, 130, 200];
+
+    for (let r = 0; r < nRings; r++) {
+        for (let i = 0; i < nodesPerRing[r]; i++) {
+            const angle = (Math.PI * 2 * i / nodesPerRing[r]) + (r % 2) * 0.2;
+            imm.junctions.push({
+                x: cx + radii[r] * Math.cos(angle) + (Math.random()-0.5) * 15,
+                y: cy + radii[r] * Math.sin(angle) + (Math.random()-0.5) * 15,
+                calcium: 0, lockdown: false, lockdownTimer: 0,
+                underAttack: false, alive: true,
+                authThreshold: 0.6,
+                ionState: Math.random(),
+            });
+        }
+    }
+
+    // Connect: each node to nearby nodes
+    for (let i = 0; i < imm.junctions.length; i++) {
+        for (let j = i + 1; j < imm.junctions.length; j++) {
+            const d = dist(imm.junctions[i], imm.junctions[j]);
+            if (d < 90) {
+                imm.segments.push({
+                    a: i, b: j,
+                    diameter: 2 + Math.random() * 4,
+                    alive: true, quarantined: false, authFailures: 0,
+                    ionSignature: Math.random() * 0.5 + 0.5,
+                    flow: 0,
+                });
+            }
+        }
+    }
+}
+
+function immAction(action) {
+    if (action === 'run') imm.running = true;
+    else if (action === 'pause') imm.running = false;
+    else if (action === 'attack') immInjectAttack(1);
+    else if (action === 'flood') immInjectAttack(5);
+    else if (action === 'ros') {
+        // ROS purge at a random attacked location or center
+        const attacked = imm.junctions.filter(j => j.underAttack);
+        const target = attacked.length > 0 ? attacked[0] : { x: 500, y: 250 };
+        imm.rosPurges.push({ x: target.x, y: target.y, radius: 0, maxRadius: 80, age: 0 });
+    }
+    else if (action === 'reset') immBuildNetwork();
+}
+
+function immInjectAttack(count) {
+    for (let c = 0; c < count; c++) {
+        const aliveIdx = [];
+        imm.junctions.forEach((j, i) => { if (j.alive) aliveIdx.push(i); });
+        if (!aliveIdx.length) return;
+
+        const targetIdx = aliveIdx[Math.floor(Math.random() * aliveIdx.length)];
+        const j = imm.junctions[targetIdx];
+
+        // Authenticate the malicious signal
+        const foreignAmplitude = 50 + Math.random() * 80;
+        const expectedAmplitude = 80 * (1.0 + (j.ionState - 0.5) * 0.4);
+        const ampScore = Math.max(0, 1.0 - Math.abs(foreignAmplitude - expectedAmplitude) / expectedAmplitude);
+        const timeScore = Math.random() * 0.6; // foreign signal has wrong timing
+        const caScore = Math.random() * 0.5;
+        const authScore = 0.4 * ampScore + 0.3 * timeScore + 0.3 * caScore;
+        const threshold = j.lockdown ? 0.9 : j.authThreshold;
+        const detected = authScore < threshold;
+
+        imm.lastAuth = { score: authScore, detected, threshold };
+
+        imm.attacks.push({
+            x: j.x, y: j.y, junctionIdx: targetIdx,
+            age: 0, detected, authScore,
+        });
+
+        if (detected) {
+            imm.stats.threats++;
+            j.underAttack = true;
+            const severity = 1.0 - authScore;
+
+            // Immune response
+            if (severity > 0.4) {
+                j.lockdown = true;
+                j.lockdownTimer = 40;
+                j.authThreshold = 0.9;
+                imm.lockdowns.add(targetIdx);
+
+                // Immune calcium burst
+                imm.immuneWaves.push({ x: j.x, y: j.y, radius: 0, strength: 1.0 });
+                imm.stats.events++;
+
+                // Quarantine connected segments
+                if (severity > 0.7) {
+                    imm.segments.forEach((s, si) => {
+                        if (!s.alive) return;
+                        if (s.a === targetIdx || s.b === targetIdx) {
+                            s.authFailures++;
+                            if (s.authFailures >= 3) {
+                                // Apoptosis
+                                s.alive = false;
+                                imm.dead.add(si);
+                                imm.quarantined.delete(si);
+                                imm.stats.apoptosis++;
+                                // Regrowth tip
+                                const other = s.a === targetIdx ? s.b : s.a;
+                                const oj = imm.junctions[other];
+                                if (oj && oj.alive) {
+                                    imm.regrowthTips.push({ x: oj.x, y: oj.y, age: 0 });
+                                }
+                            } else {
+                                s.quarantined = true;
+                                imm.quarantined.add(si);
+                            }
+                        }
+                    });
+                }
+            }
+        }
+    }
+
+    // Update UI
+    document.getElementById('immAuthScore').textContent = imm.lastAuth.score.toFixed(3);
+    document.getElementById('immThresh').textContent = imm.lastAuth.threshold.toFixed(1);
+    document.getElementById('immResult').textContent = imm.lastAuth.detected ? 'REJECTED' : 'PASSED';
+    document.getElementById('immResult').style.color = imm.lastAuth.detected ? '#4CAF50' : '#f44336';
+}
+
+function updateImmune() {
+    if (!imm.running) return;
+    imm.tick++;
+
+    // Immune wave propagation
+    imm.immuneWaves.forEach(w => {
+        w.radius += 6;
+        w.strength *= 0.95;
+
+        // Lock down junctions in the wave front
+        imm.junctions.forEach((j, i) => {
+            if (!j.alive) return;
+            const d = dist(w, j);
+            if (Math.abs(d - w.radius) < 15 && !j.lockdown) {
+                j.lockdown = true;
+                j.lockdownTimer = 20;
+                j.authThreshold = 0.9;
+                imm.lockdowns.add(i);
+                j.calcium = Math.max(j.calcium, w.strength * 2);
+            }
+        });
+    });
+    imm.immuneWaves = imm.immuneWaves.filter(w => w.strength > 0.05);
+
+    // ROS purge expansion
+    imm.rosPurges.forEach(p => {
+        p.radius += 3;
+        p.age++;
+        if (p.radius >= p.maxRadius) {
+            // Kill everything in radius
+            imm.segments.forEach((s, si) => {
+                if (!s.alive) return;
+                const a = imm.junctions[s.a], b = imm.junctions[s.b];
+                const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+                if (dist(p, { x: mx, y: my }) < p.maxRadius) {
+                    s.alive = false;
+                    imm.dead.add(si);
+                    imm.quarantined.delete(si);
+                }
+            });
+        }
+    });
+    imm.rosPurges = imm.rosPurges.filter(p => p.age < 40);
+
+    // Lockdown decay
+    imm.junctions.forEach((j, i) => {
+        if (j.lockdown) {
+            j.lockdownTimer--;
+            if (j.lockdownTimer <= 0) {
+                j.lockdown = false;
+                j.underAttack = false;
+                j.authThreshold = 0.6;
+                imm.lockdowns.delete(i);
+            }
+        }
+        j.calcium *= 0.9;
+    });
+
+    // Quarantine recovery
+    imm.segments.forEach((s, si) => {
+        if (s.quarantined) {
+            if (Math.random() < 0.01) { // slow recovery
+                s.quarantined = false;
+                s.authFailures = 0;
+                imm.quarantined.delete(si);
+            }
+        }
+    });
+
+    // Regrowth tips fade
+    imm.regrowthTips.forEach(t => t.age++);
+    imm.regrowthTips = imm.regrowthTips.filter(t => t.age < 60);
+
+    // Attack markers fade
+    imm.attacks.forEach(a => a.age++);
+    imm.attacks = imm.attacks.filter(a => a.age < 40);
+
+    // Update stats
+    const aliveSegs = imm.segments.filter(s => s.alive).length;
+    const totalSegs = imm.segments.length;
+    const health = totalSegs > 0 ? Math.floor(aliveSegs / totalSegs * 100) : 100;
+    document.getElementById('immHealth').textContent = health;
+    document.getElementById('immSegs').textContent = aliveSegs;
+    document.getElementById('immQuar').textContent = imm.quarantined.size;
+    document.getElementById('immDead').textContent = imm.dead.size;
+    document.getElementById('immThreats').textContent = imm.stats.threats;
+    document.getElementById('immLocked').textContent = imm.lockdowns.size;
+    document.getElementById('immEvents').textContent = imm.stats.events;
+}
+
+function drawImmune() {
+    const ctx = immuneCtx, W = 1000, H = 500;
+    ctx.fillStyle = '#0a0a0a'; ctx.fillRect(0, 0, W, H);
+
+    // ROS purge zones
+    imm.rosPurges.forEach(p => {
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        const alpha = Math.max(0, 0.3 - p.age * 0.008);
+        ctx.fillStyle = `rgba(244,67,54,${alpha})`;
+        ctx.fill();
+        ctx.strokeStyle = `rgba(244,67,54,${alpha * 2})`;
+        ctx.lineWidth = 2; ctx.stroke();
+    });
+
+    // Segments
+    imm.segments.forEach((s, si) => {
+        const a = imm.junctions[s.a], b = imm.junctions[s.b];
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+
+        if (!s.alive) {
+            ctx.strokeStyle = 'rgba(50,50,50,0.3)';
+            ctx.lineWidth = 0.5;
+            ctx.setLineDash([2, 4]);
+        } else if (s.quarantined) {
+            ctx.strokeStyle = 'rgba(121,85,72,0.7)';
+            ctx.lineWidth = s.diameter * 0.4;
+            ctx.setLineDash([3, 3]);
+        } else {
+            ctx.strokeStyle = `rgba(76,175,80,${0.2 + s.diameter / 15})`;
+            ctx.lineWidth = s.diameter * 0.4;
+            ctx.setLineDash([]);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+    });
+
+    // Immune waves
+    imm.immuneWaves.forEach(w => {
+        ctx.beginPath(); ctx.arc(w.x, w.y, w.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(156,39,176,${w.strength * 0.6})`;
+        ctx.lineWidth = 3; ctx.stroke();
+        // Inner glow
+        ctx.beginPath(); ctx.arc(w.x, w.y, w.radius * 0.8, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(156,39,176,${w.strength * 0.2})`;
+        ctx.lineWidth = 8; ctx.stroke();
+    });
+
+    // Junctions
+    imm.junctions.forEach((j, i) => {
+        if (!j.alive) return;
+        const r = 4;
+
+        // Calcium glow
+        if (j.calcium > 0.2) {
+            ctx.beginPath(); ctx.arc(j.x, j.y, r + j.calcium * 6, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(156,39,176,${Math.min(j.calcium * 0.3, 0.4)})`;
+            ctx.fill();
+        }
+
+        // Lockdown ring
+        if (j.lockdown) {
+            ctx.beginPath(); ctx.arc(j.x, j.y, r + 6, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(255,152,0,${0.5 + Math.sin(imm.tick * 0.3) * 0.3})`;
+            ctx.lineWidth = 2; ctx.stroke();
+        }
+
+        ctx.beginPath(); ctx.arc(j.x, j.y, r, 0, Math.PI * 2);
+        if (j.underAttack) ctx.fillStyle = '#f44336';
+        else if (j.lockdown) ctx.fillStyle = '#FF9800';
+        else ctx.fillStyle = '#4CAF50';
+        ctx.fill();
+    });
+
+    // Attack markers
+    imm.attacks.forEach(a => {
+        const alpha = Math.max(0, 1 - a.age / 40);
+        const pulseR = 8 + a.age * 0.5;
+
+        if (a.detected) {
+            // Detected — red X
+            ctx.strokeStyle = `rgba(244,67,54,${alpha})`;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(a.x - 8, a.y - 8); ctx.lineTo(a.x + 8, a.y + 8);
+            ctx.moveTo(a.x + 8, a.y - 8); ctx.lineTo(a.x - 8, a.y + 8);
+            ctx.stroke();
+            // Auth score
+            ctx.fillStyle = `rgba(244,67,54,${alpha})`;
+            ctx.font = '9px monospace'; ctx.textAlign = 'center';
+            ctx.fillText(`AUTH: ${a.authScore.toFixed(2)} REJECTED`, a.x, a.y - 14);
+        } else {
+            // Not detected — yellow warning
+            ctx.fillStyle = `rgba(255,235,59,${alpha})`;
+            ctx.font = 'bold 14px serif'; ctx.textAlign = 'center';
+            ctx.fillText('!', a.x, a.y - 10);
+            ctx.font = '9px monospace';
+            ctx.fillText(`AUTH: ${a.authScore.toFixed(2)} PASSED`, a.x, a.y + 18);
+        }
+    });
+
+    // Regrowth tips
+    imm.regrowthTips.forEach(t => {
+        const alpha = Math.max(0, 1 - t.age / 60);
+        const pulse = 3 + Math.sin(t.age * 0.2) * 2;
+        ctx.beginPath(); ctx.arc(t.x, t.y, pulse, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(233,30,99,${alpha * 0.7})`;
+        ctx.fill();
+    });
+
+    // Status text
+    ctx.fillStyle = '#555'; ctx.font = '11px monospace'; ctx.textAlign = 'left';
+    ctx.fillText(`Tick: ${imm.tick} | Threats: ${imm.stats.threats} | Apoptosis: ${imm.stats.apoptosis} | Active lockdowns: ${imm.lockdowns.size}`, 10, H - 10);
+}
+
+immBuildNetwork();
+
 // ─── Main Loop ───────────────────────────────────────────────
 initNetwork(); initRadio(); initBio();
 
@@ -2133,6 +2563,7 @@ function mainLoop() {
     updateTransmit(); drawTransmit();
     updateImage(); drawImage();
     updateEncrypt(); drawEncrypt();
+    updateImmune(); drawImmune();
     requestAnimationFrame(mainLoop);
 }
 mainLoop();

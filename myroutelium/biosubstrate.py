@@ -42,6 +42,12 @@ class HyphalSegment:
     is_rhizomorph: bool = False
     sustained_flow_ticks: int = 0
 
+    # Immune system
+    quarantined: bool = False
+    quarantine_timer: int = 0
+    auth_failures: int = 0
+    ion_signature: float = 0.0  # unique biological fingerprint
+
     @property
     def resistance(self) -> float:
         """Electrical resistance (MΩ) — thicker = lower resistance."""
@@ -91,6 +97,13 @@ class Junction:
     # Spike detection
     last_spike_tick: int = -100
     spike_count: int = 0
+
+    # Immune system
+    under_attack: bool = False
+    lockdown: bool = False
+    lockdown_timer: int = 0
+    auth_threshold: float = 0.6  # raised to 0.9 during lockdown
+    immune_events: int = 0
 
 
 @dataclass
@@ -189,6 +202,15 @@ class BioSubstrate:
         # Rhizomorph
         rhizo_flow_threshold: float = 0.5,
         rhizo_ticks_required: int = 50,
+        # Immune system parameters
+        auth_threshold: float = 0.6,
+        lockdown_auth_threshold: float = 0.9,
+        lockdown_duration: int = 20,
+        immune_speed_multiplier: float = 5.0,
+        quarantine_duration: int = 100,
+        apoptosis_failure_count: int = 3,
+        ros_purge_radius: float = 5.0,
+        compat_check_interval: int = 200,
     ):
         self.env = environment or Environment()
         self.base_growth_rate = base_growth_rate
@@ -219,6 +241,21 @@ class BioSubstrate:
         self._next_electrode_id = 0
         self.tick_count = 0
 
+        # Immune system
+        self.auth_threshold = auth_threshold
+        self.lockdown_auth_threshold = lockdown_auth_threshold
+        self.lockdown_duration = lockdown_duration
+        self.immune_speed_multiplier = immune_speed_multiplier
+        self.quarantine_duration = quarantine_duration
+        self.apoptosis_failure_count = apoptosis_failure_count
+        self.ros_purge_radius = ros_purge_radius
+        self.compat_check_interval = compat_check_interval
+        self._immune_signals: deque[tuple[int, float, dict]] = deque()  # (junction_id, strength, data)
+        self._threats_detected = 0
+        self._quarantined_count = 0
+        self._apoptosis_count = 0
+        self._immune_events_total = 0
+
         # Pending spikes to propagate
         self._pending_spikes: deque[tuple[int, int, int]] = deque()  # (junction_id, from_segment, arrive_tick)
 
@@ -245,6 +282,8 @@ class BioSubstrate:
             length=length, diameter=diameter,
             conductivity=1.0 * self.env.conductivity_factor,
         )
+        # Unique biological fingerprint for authentication
+        seg.ion_signature = random.random() * 0.5 + 0.5 + diameter * 0.01
         self.segments[sid] = seg
         ja.segments.append(sid)
         jb.segments.append(sid)
@@ -652,6 +691,275 @@ class BioSubstrate:
             return 3  # new_path
         return 0
 
+    # ─── Immune System ────────────────────────────────────────
+
+    def inject_malicious_signal(self, junction_id: int, amplitude: float = 50.0,
+                                pattern: str = "foreign") -> dict:
+        """Inject a malicious/foreign signal at a junction. Returns detection result."""
+        j = self.junctions.get(junction_id)
+        if j is None or not j.alive:
+            return {"detected": False, "reason": "junction_dead"}
+
+        # Generate the foreign signal characteristics
+        foreign_amplitude = amplitude * (0.7 + random.random() * 0.6)  # wrong amplitude
+        foreign_rise_time = random.uniform(0.5, 3.0)  # wrong timing
+        foreign_ca_response = random.uniform(0.01, 0.5)  # wrong calcium
+
+        # Compute authentication score
+        auth_score = self._authenticate_signal(j, foreign_amplitude, foreign_rise_time, foreign_ca_response)
+
+        threshold = self.lockdown_auth_threshold if j.lockdown else self.auth_threshold
+
+        result = {
+            "detected": auth_score < threshold,
+            "auth_score": auth_score,
+            "threshold": threshold,
+            "junction_id": junction_id,
+            "lockdown": j.lockdown,
+        }
+
+        if auth_score < threshold:
+            # Threat detected
+            self._threats_detected += 1
+            j.under_attack = True
+            j.immune_events += 1
+            result["response"] = self._immune_response(j, severity=1.0 - auth_score)
+        else:
+            # Signal passed authentication (false negative)
+            j.potential += foreign_amplitude * 0.3
+            result["response"] = "passed_auth"
+
+        return result
+
+    def _authenticate_signal(self, junction: Junction, amplitude: float,
+                              rise_time: float, ca_response: float) -> float:
+        """Compute biological authentication score for a signal.
+
+        Compares signal properties against expected biological response.
+        Returns score 0-1 where 1 = perfect match (legitimate).
+        """
+        # Expected response based on junction's current electrochemical state
+        expected_amplitude = self.spike_amplitude * (1.0 + (junction.potential - self.resting_potential) / 200)
+        expected_rise_time = 1.5 + junction.calcium * 0.2  # Ca2+ affects rise time
+        expected_ca = self.ca_spike * (1.0 - junction.calcium / (junction.calcium + 1.0))
+
+        # Connected segment signatures affect expected response
+        seg_signature = 0.0
+        for sid in junction.segments:
+            seg = self.segments.get(sid)
+            if seg and seg.alive and not seg.quarantined:
+                seg_signature += seg.ion_signature
+        if junction.segments:
+            seg_signature /= len(junction.segments)
+
+        expected_amplitude *= (0.8 + seg_signature * 0.4)
+
+        # Score each dimension
+        amp_score = max(0, 1.0 - abs(amplitude - expected_amplitude) / max(expected_amplitude, 1))
+        time_score = max(0, 1.0 - abs(rise_time - expected_rise_time) / max(expected_rise_time, 0.1))
+        ca_score = max(0, 1.0 - abs(ca_response - expected_ca) / max(expected_ca, 0.01))
+
+        # Weighted combination
+        return 0.4 * amp_score + 0.3 * time_score + 0.3 * ca_score
+
+    def _immune_response(self, junction: Junction, severity: float) -> str:
+        """Execute immune response at a junction. Returns response type."""
+        response = "none"
+
+        if severity > 0.8:
+            # Critical threat — immediate lockdown + calcium immune burst
+            junction.lockdown = True
+            junction.lockdown_timer = self.lockdown_duration
+            junction.auth_threshold = self.lockdown_auth_threshold
+            self._emit_immune_signal(junction.id, strength=1.0, severity=severity)
+            response = "lockdown_immune_burst"
+
+            # Quarantine connected segments
+            for sid in junction.segments:
+                seg = self.segments.get(sid)
+                if seg and seg.alive:
+                    seg.auth_failures += 1
+                    if seg.auth_failures >= self.apoptosis_failure_count:
+                        self._apoptosis(seg)
+                        response = "apoptosis"
+                    else:
+                        self._quarantine_segment(seg)
+                        response = "quarantine"
+
+        elif severity > 0.4:
+            # Moderate threat — lockdown + immune signal
+            junction.lockdown = True
+            junction.lockdown_timer = self.lockdown_duration
+            junction.auth_threshold = self.lockdown_auth_threshold
+            self._emit_immune_signal(junction.id, strength=0.7, severity=severity)
+            response = "lockdown_alert"
+
+        else:
+            # Low threat — warn only
+            self._emit_immune_signal(junction.id, strength=0.3, severity=severity)
+            response = "warning"
+
+        self._immune_events_total += 1
+        return response
+
+    def _emit_immune_signal(self, origin_id: int, strength: float = 1.0,
+                            severity: float = 0.5) -> None:
+        """Emit a fast-propagating immune calcium signal."""
+        self._immune_signals.append((origin_id, strength, {
+            "type": "IMMUNE",
+            "severity": severity,
+            "origin": origin_id,
+        }))
+
+    def _propagate_immune_signals(self) -> int:
+        """Propagate immune signals through the network at 5x speed."""
+        propagated = 0
+        for _ in range(int(self.immune_speed_multiplier)):
+            if not self._immune_signals:
+                break
+
+            next_round: deque[tuple[int, float, dict]] = deque()
+            seen: set[int] = set()
+
+            while self._immune_signals:
+                jid, strength, data = self._immune_signals.popleft()
+                if jid in seen:
+                    continue
+                seen.add(jid)
+                propagated += 1
+
+                j = self.junctions.get(jid)
+                if j is None or not j.alive:
+                    continue
+
+                # Immune signal effects on receiving junction
+                if not j.lockdown and strength > 0.3:
+                    j.lockdown = True
+                    j.lockdown_timer = max(j.lockdown_timer, self.lockdown_duration // 2)
+                    j.auth_threshold = self.lockdown_auth_threshold
+
+                # Boost calcium (defensive priming)
+                j.calcium = max(j.calcium, self.ca_spike * strength * 0.5)
+
+                # Propagate to neighbors
+                new_strength = strength * 0.75
+                if new_strength < 0.1:
+                    continue
+
+                for sid in j.segments:
+                    seg = self.segments.get(sid)
+                    if seg is None or not seg.alive or seg.quarantined:
+                        continue
+                    other_id = seg.junction_b if seg.junction_a == jid else seg.junction_a
+                    if other_id not in seen:
+                        next_round.append((other_id, new_strength, data))
+
+            self._immune_signals = next_round
+
+        return propagated
+
+    def _quarantine_segment(self, segment: HyphalSegment) -> None:
+        """Quarantine a segment — electrically isolate it."""
+        segment.quarantined = True
+        segment.quarantine_timer = self.quarantine_duration
+        segment.conductivity *= 0.01  # near-zero conductivity (melanin wall)
+        self._quarantined_count += 1
+
+    def _apoptosis(self, segment: HyphalSegment) -> None:
+        """Kill a segment — programmed cell death."""
+        segment.alive = False
+        segment.quarantined = False
+        self._apoptosis_count += 1
+
+        # Emit death signal to attract regrowth
+        for jid in [segment.junction_a, segment.junction_b]:
+            j = self.junctions.get(jid)
+            if j and j.alive:
+                j.calcium = max(j.calcium, self.ca_spike * 0.3)
+
+    def ros_purge(self, center_x: float, center_y: float) -> int:
+        """ROS purge — kill ALL segments within radius. Nuclear option. Returns killed count."""
+        killed = 0
+        for seg in self.segments.values():
+            if not seg.alive:
+                continue
+            ja = self.junctions.get(seg.junction_a)
+            jb = self.junctions.get(seg.junction_b)
+            if ja is None or jb is None:
+                continue
+            mx = (ja.x + jb.x) / 2
+            my = (ja.y + jb.y) / 2
+            if math.sqrt((mx - center_x)**2 + (my - center_y)**2) < self.ros_purge_radius:
+                seg.alive = False
+                killed += 1
+
+        # Emit regrowth attractant calcium
+        for j in self.junctions.values():
+            if j.alive and math.sqrt((j.x - center_x)**2 + (j.y - center_y)**2) < self.ros_purge_radius * 1.5:
+                j.calcium = max(j.calcium, self.ca_spike * 0.5)
+
+        return killed
+
+    def _update_immune_state(self) -> None:
+        """Update lockdown timers, quarantine timers, and segment recovery."""
+        # Junction lockdowns
+        for j in self.junctions.values():
+            if j.lockdown:
+                j.lockdown_timer -= 1
+                if j.lockdown_timer <= 0:
+                    j.lockdown = False
+                    j.under_attack = False
+                    j.auth_threshold = self.auth_threshold
+
+        # Segment quarantines
+        for seg in self.segments.values():
+            if seg.quarantined:
+                seg.quarantine_timer -= 1
+                if seg.quarantine_timer <= 0:
+                    # Re-test: restore if no recent failures
+                    if seg.auth_failures < self.apoptosis_failure_count:
+                        seg.quarantined = False
+                        seg.conductivity = 1.0 * self.env.conductivity_factor
+                        self._quarantined_count = max(0, self._quarantined_count - 1)
+                    else:
+                        # Still failing — trigger apoptosis
+                        self._apoptosis(seg)
+
+        # Compatibility check (periodic)
+        if self.tick_count > 0 and self.tick_count % self.compat_check_interval == 0:
+            self._vegetative_compatibility_check()
+
+    def _vegetative_compatibility_check(self) -> int:
+        """Check all segment pairs for biological compatibility. Returns incompatibilities found."""
+        incompatible = 0
+        for seg in list(self.segments.values()):
+            if not seg.alive or seg.quarantined:
+                continue
+            # Check if ion signature has drifted beyond tolerance
+            # (simulates detection of foreign tissue)
+            expected_sig = 0.5 + seg.diameter * 0.01
+            if abs(seg.ion_signature - expected_sig) > 0.8:
+                # Incompatible — trigger contact zone apoptosis
+                self._apoptosis(seg)
+                incompatible += 1
+        return incompatible
+
+    def get_immune_status(self) -> dict:
+        """Get current immune system status."""
+        locked = sum(1 for j in self.junctions.values() if j.lockdown)
+        quarantined = sum(1 for s in self.segments.values() if s.quarantined)
+        under_attack = sum(1 for j in self.junctions.values() if j.under_attack)
+
+        return {
+            "threats_detected": self._threats_detected,
+            "immune_events": self._immune_events_total,
+            "junctions_locked": locked,
+            "junctions_under_attack": under_attack,
+            "segments_quarantined": quarantined,
+            "segments_killed": self._apoptosis_count,
+            "network_health": 1.0 - (quarantined + locked) / max(len(self.segments) + len(self.junctions), 1),
+        }
+
     # ─── Flow Management ──────────────────────────────────────
 
     def reset_flows(self) -> None:
@@ -692,12 +1000,13 @@ class BioSubstrate:
             j = self.junctions[jid]
             for sid in j.segments:
                 seg = self.segments[sid]
-                if not seg.alive:
+                if not seg.alive or seg.quarantined:
                     continue
                 other = seg.junction_b if seg.junction_a == jid else seg.junction_a
                 if other in visited:
                     continue
-                if not self.junctions[other].alive:
+                other_j = self.junctions.get(other)
+                if not other_j or not other_j.alive or other_j.lockdown:
                     continue
 
                 # Weight: resistance (favors thick, short segments)
@@ -765,7 +1074,12 @@ class BioSubstrate:
         # Update electrode-junction connections (network may have grown closer)
         self._reconnect_electrodes()
 
+        # Immune system
+        immune_propagated = self._propagate_immune_signals()
+        self._update_immune_state()
+
         # Electrode readings
+        self._reconnect_electrodes()
         self._update_electrodes()
 
         self.tick_count += 1
@@ -775,6 +1089,7 @@ class BioSubstrate:
         alive_juncs = [j for j in self.junctions.values() if j.alive]
         tips = [j for j in alive_juncs if j.junction_type == "tip"]
         rhizomorphs = [s for s in alive_segs if s.is_rhizomorph]
+        immune = self.get_immune_status()
 
         return {
             "tick": self.tick_count,
@@ -790,6 +1105,12 @@ class BioSubstrate:
             "avg_calcium": sum(j.calcium for j in alive_juncs) / len(alive_juncs) if alive_juncs else 0,
             "total_length_mm": sum(s.length for s in alive_segs),
             "avg_bandwidth": sum(s.bandwidth for s in alive_segs) / len(alive_segs) if alive_segs else 0,
+            "immune_propagated": immune_propagated,
+            "threats_detected": immune["threats_detected"],
+            "quarantined": immune["segments_quarantined"],
+            "apoptosis": immune["segments_killed"],
+            "locked_junctions": immune["junctions_locked"],
+            "network_health": immune["network_health"],
         }
 
     # ─── Helpers ──────────────────────────────────────────────

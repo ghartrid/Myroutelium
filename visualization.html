@@ -120,6 +120,7 @@ canvas { display: block; margin: 0 auto; border-radius: 8px; background: #111; b
     <div class="tab" onclick="showPanel('network')">Network Layer</div>
     <div class="tab" onclick="showPanel('radio')">Physical Layer</div>
     <div class="tab" onclick="showPanel('bio')">Bio Substrate</div>
+    <div class="tab" onclick="showPanel('transmit')">Text Transmission</div>
 </div>
 
 <!-- ════════ Architecture Panel ════════ -->
@@ -255,14 +256,57 @@ canvas { display: block; margin: 0 auto; border-radius: 8px; background: #111; b
     </div>
 </div>
 
+<!-- ════════ Text Transmission Panel ════════ -->
+<div id="transmit" class="panel">
+    <canvas id="transmitCanvas" width="1000" height="500"></canvas>
+    <div style="display:flex; gap:12px; justify-content:center; align-items:center; margin:16px 0; flex-wrap:wrap;">
+        <input id="txInput" type="text" value="Hello World" maxlength="40"
+            style="padding:8px 16px; background:#111; border:1px solid #4CAF50; border-radius:4px;
+                   color:#4CAF50; font-size:1em; width:280px; font-family:monospace;"
+            onkeydown="if(event.key==='Enter') txSend()">
+        <button class="btn" onclick="txSend()">Transmit Through Mycelium</button>
+        <button class="btn orange" onclick="txReset()">Reset</button>
+    </div>
+    <div style="display:flex; gap:20px; max-width:1000px; margin:0 auto;">
+        <div class="info" style="flex:1;">
+            <h3>Encoder (Source Electrode)</h3>
+            <p>
+                Text &rarr; ASCII &rarr; 8-bit binary &rarr; <strong style="color:#FF9800">spike train</strong><br>
+                Each bit is a <span class="stat">10s</span> time slot. Spike = 1, silence = 0.<br>
+                <span id="txBinary" style="color:#4CAF50; font-family:monospace; word-break:break-all; font-size:0.85em;"></span>
+            </p>
+        </div>
+        <div class="info" style="flex:1;">
+            <h3>Decoder (Destination Electrode)</h3>
+            <p>
+                Spike train &rarr; binary &rarr; ASCII &rarr; <strong style="color:#2196F3">text</strong><br>
+                Signal attenuates through hyphae. Thicker paths = clearer signal.<br>
+                <span id="rxText" style="color:#2196F3; font-family:monospace; font-size:1.2em;"></span>
+            </p>
+        </div>
+    </div>
+    <div class="info">
+        <h3>How It Works</h3>
+        <p>
+            Each character is converted to 8-bit ASCII. The source electrode injects a current pulse for each <span class="stat">1</span> bit
+            and stays silent for each <span class="stat">0</span> bit. The resulting action potentials propagate through the mycelial network
+            as Ca2+ waves along hyphal segments. The destination electrode detects spikes and reconstructs the binary stream.
+            <br><br>
+            Signal quality depends on the <strong style="color:#4CAF50">biological path</strong> — thicker rhizomorphs carry signals further
+            with less attenuation. This is a living, biological data link.
+        </p>
+    </div>
+</div>
+
 <script>
 // ─── Tab Navigation ──────────────────────────────────────────
 function showPanel(id) {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.getElementById(id).classList.add('active');
+    const tabMap = { arch: 'Architecture', network: 'Network', radio: 'Physical', bio: 'Bio', transmit: 'Text' };
     document.querySelectorAll('.tab').forEach(t => {
-        if (t.textContent.toLowerCase().includes(id.substring(0, 4))) t.classList.add('active');
+        if (t.textContent.includes(tabMap[id] || '')) t.classList.add('active');
     });
 }
 
@@ -766,6 +810,338 @@ function drawBio() {
     });
 }
 
+// ═══════════════════════════════════════════════════════════════
+// TEXT TRANSMISSION VISUALIZATION
+// ═══════════════════════════════════════════════════════════════
+const txCanvas = document.getElementById('transmitCanvas');
+const txCtx = txCanvas.getContext('2d');
+
+let txState = {
+    bits: [],           // full binary stream
+    bitIndex: 0,        // current bit being transmitted
+    sending: false,
+    received: [],       // received bits
+    receivedText: '',
+    spikes: [],         // active spike animations {x, y, progress, bit}
+    network: { junctions: [], segments: [] },
+    srcElectrode: { x: 80, y: 250 },
+    dstElectrode: { x: 920, y: 250 },
+    tickCounter: 0,
+    message: '',
+    charProgress: 0,    // which char we're on
+    bitInChar: 0,       // which bit in current char
+};
+
+function txBuildNetwork() {
+    // Build a mycelial network between source and destination electrodes
+    const junctions = [];
+    const segments = [];
+
+    // Main trunk with some branching
+    const nMain = 12;
+    for (let i = 0; i < nMain; i++) {
+        const t = i / (nMain - 1);
+        const x = lerp(txState.srcElectrode.x + 40, txState.dstElectrode.x - 40, t);
+        const y = 250 + Math.sin(t * Math.PI * 2.5) * 40 + (Math.random() - 0.5) * 30;
+        junctions.push({ x, y, calcium: 0, type: 'branch' });
+    }
+
+    // Connect main trunk
+    for (let i = 0; i < nMain - 1; i++) {
+        segments.push({ a: i, b: i + 1, diameter: 5 + Math.random() * 3, flow: 0, rhizomorph: i > 2 && i < nMain - 3 });
+    }
+
+    // Branch paths (redundancy)
+    for (let i = 1; i < nMain - 1; i += 2) {
+        const branch = junctions.length;
+        const dir = (i % 4 < 2) ? -1 : 1;
+        junctions.push({
+            x: junctions[i].x + (Math.random() - 0.5) * 20,
+            y: junctions[i].y + dir * (30 + Math.random() * 40),
+            calcium: 0, type: 'branch'
+        });
+        segments.push({ a: i, b: branch, diameter: 2 + Math.random() * 2, flow: 0, rhizomorph: false });
+        // Connect some branches to next main node
+        if (i + 1 < nMain) {
+            segments.push({ a: branch, b: i + 1, diameter: 2 + Math.random() * 2, flow: 0, rhizomorph: false });
+        }
+    }
+
+    // Add tips
+    for (let i = 0; i < 6; i++) {
+        const parent = Math.floor(Math.random() * nMain);
+        const tip = junctions.length;
+        junctions.push({
+            x: junctions[parent].x + (Math.random() - 0.5) * 40,
+            y: junctions[parent].y + (Math.random() - 0.5) * 60,
+            calcium: 0, type: 'tip'
+        });
+        segments.push({ a: parent, b: tip, diameter: 2, flow: 0, rhizomorph: false });
+    }
+
+    txState.network = { junctions, segments };
+}
+
+function txSend() {
+    const input = document.getElementById('txInput').value;
+    if (!input) return;
+
+    txState.message = input;
+    txState.bits = [];
+    txState.bitIndex = 0;
+    txState.received = [];
+    txState.receivedText = '';
+    txState.sending = true;
+    txState.spikes = [];
+    txState.charProgress = 0;
+    txState.bitInChar = 0;
+
+    // Encode text to binary
+    for (let i = 0; i < input.length; i++) {
+        const code = input.charCodeAt(i);
+        for (let b = 7; b >= 0; b--) {
+            txState.bits.push((code >> b) & 1);
+        }
+    }
+
+    document.getElementById('txBinary').textContent = txState.bits.join('');
+    document.getElementById('rxText').textContent = '';
+}
+
+function txReset() {
+    txState.sending = false;
+    txState.bits = [];
+    txState.bitIndex = 0;
+    txState.received = [];
+    txState.receivedText = '';
+    txState.spikes = [];
+    txState.charProgress = 0;
+    txState.bitInChar = 0;
+    document.getElementById('txBinary').textContent = '';
+    document.getElementById('rxText').textContent = '';
+    txBuildNetwork();
+}
+
+function updateTransmit() {
+    txState.tickCounter++;
+
+    // Send next bit every N frames
+    const FRAMES_PER_BIT = 12;
+    if (txState.sending && txState.tickCounter % FRAMES_PER_BIT === 0 && txState.bitIndex < txState.bits.length) {
+        const bit = txState.bits[txState.bitIndex];
+
+        if (bit === 1) {
+            // Create spike at source electrode
+            txState.spikes.push({
+                x: txState.srcElectrode.x,
+                y: txState.srcElectrode.y,
+                progress: 0,  // 0 to 1 across the network
+                bit: 1,
+                bitIdx: txState.bitIndex,
+                alive: true,
+            });
+            // Calcium burst at source
+            if (txState.network.junctions.length > 0) {
+                txState.network.junctions[0].calcium = 3.0;
+            }
+        } else {
+            // Silence — record a 0 after propagation delay
+            txState.spikes.push({
+                x: txState.srcElectrode.x,
+                y: txState.srcElectrode.y,
+                progress: 0,
+                bit: 0,
+                bitIdx: txState.bitIndex,
+                alive: true,
+            });
+        }
+
+        txState.bitIndex++;
+    }
+
+    // Propagate spikes through network
+    txState.spikes.forEach(s => {
+        if (!s.alive) return;
+        s.progress += 0.025;  // speed through the network
+
+        // Update position along the main trunk
+        const junctions = txState.network.junctions;
+        if (junctions.length > 1) {
+            const idx = Math.floor(s.progress * (junctions.length - 1));
+            const frac = (s.progress * (junctions.length - 1)) - idx;
+            if (idx < junctions.length - 1) {
+                s.x = lerp(junctions[idx].x, junctions[idx + 1].x, frac);
+                s.y = lerp(junctions[idx].y, junctions[idx + 1].y, frac);
+                // Light up calcium along the path
+                if (s.bit === 1) {
+                    junctions[idx].calcium = Math.max(junctions[idx].calcium, 2.0);
+                    // Flow on segments
+                    txState.network.segments.forEach(seg => {
+                        if (seg.a === idx || seg.b === idx) seg.flow = Math.max(seg.flow, 0.5);
+                    });
+                }
+            }
+        }
+
+        // Arrived at destination
+        if (s.progress >= 1.0) {
+            s.alive = false;
+            txState.received.push(s.bit);
+
+            // Decode when we have 8 bits
+            if (txState.received.length > 0 && txState.received.length % 8 === 0) {
+                const lastByte = txState.received.slice(-8);
+                const charCode = lastByte.reduce((acc, b, i) => acc | (b << (7 - i)), 0);
+                if (charCode > 0 && charCode < 128) {
+                    txState.receivedText += String.fromCharCode(charCode);
+                    document.getElementById('rxText').textContent = txState.receivedText;
+                }
+            }
+        }
+    });
+
+    txState.spikes = txState.spikes.filter(s => s.alive);
+
+    // Calcium decay on network
+    txState.network.junctions.forEach(j => { j.calcium *= 0.92; });
+    txState.network.segments.forEach(s => { s.flow *= 0.9; });
+
+    // Check if done
+    if (txState.sending && txState.bitIndex >= txState.bits.length && txState.spikes.length === 0) {
+        txState.sending = false;
+    }
+}
+
+function drawTransmit() {
+    const ctx = txCtx, W = txCanvas.width, H = txCanvas.height;
+    ctx.fillStyle = '#0a120a'; ctx.fillRect(0, 0, W, H);
+
+    const { junctions, segments } = txState.network;
+
+    // Draw segments
+    segments.forEach(s => {
+        const a = junctions[s.a], b = junctions[s.b];
+        if (!a || !b) return;
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+        const width = s.diameter * 0.5;
+        if (s.rhizomorph) {
+            ctx.strokeStyle = `rgba(255,152,0,${0.4 + s.flow})`;
+            ctx.lineWidth = width * 1.5;
+        } else if (s.flow > 0.1) {
+            ctx.strokeStyle = `rgba(76,175,80,${0.3 + s.flow * 0.7})`;
+            ctx.lineWidth = width + s.flow * 2;
+        } else {
+            ctx.strokeStyle = `rgba(76,175,80,0.25)`;
+            ctx.lineWidth = width;
+        }
+        ctx.stroke();
+    });
+
+    // Draw junctions with calcium glow
+    junctions.forEach(j => {
+        if (j.calcium > 0.2) {
+            ctx.beginPath(); ctx.arc(j.x, j.y, 4 + j.calcium * 4, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(156,39,176,${Math.min(j.calcium / 4, 0.6)})`;
+            ctx.fill();
+        }
+        ctx.beginPath(); ctx.arc(j.x, j.y, j.type === 'tip' ? 2.5 : 2, 0, Math.PI * 2);
+        ctx.fillStyle = j.type === 'tip' ? '#E91E63' : '#4CAF50';
+        ctx.fill();
+    });
+
+    // Draw active spikes (only for bit=1)
+    txState.spikes.forEach(s => {
+        if (!s.alive || s.bit === 0) return;
+        // Glowing pulse
+        ctx.beginPath(); ctx.arc(s.x, s.y, 8, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,152,0,0.8)'; ctx.fill();
+        ctx.beginPath(); ctx.arc(s.x, s.y, 14, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,152,0,0.2)'; ctx.fill();
+    });
+
+    // Draw electrodes
+    const drawElectrode = (e, label, color) => {
+        // Triangle
+        ctx.beginPath();
+        ctx.moveTo(e.x, e.y - 14); ctx.lineTo(e.x - 10, e.y + 8); ctx.lineTo(e.x + 10, e.y + 8);
+        ctx.closePath();
+        ctx.fillStyle = color; ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+        // Label
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
+        ctx.fillText(label, e.x, e.y + 24);
+        // Pulse ring when active
+        const isActive = txState.sending && txState.spikes.some(s => s.alive && dist(s, e) < 30);
+        if (isActive) {
+            ctx.beginPath(); ctx.arc(e.x, e.y, 20 + Math.sin(txState.tickCounter * 0.2) * 4, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(255,152,0,0.5)`; ctx.lineWidth = 2; ctx.stroke();
+        }
+    };
+
+    drawElectrode(txState.srcElectrode, 'SOURCE', '#FF9800');
+    drawElectrode(txState.dstElectrode, 'DESTINATION', '#2196F3');
+
+    // Draw bit stream visualization at top
+    const bitY = 30;
+    const bitW = 6;
+    const bitStart = 100;
+    ctx.fillStyle = '#555'; ctx.font = '10px monospace'; ctx.textAlign = 'left';
+    ctx.fillText('TX:', 60, bitY + 4);
+
+    for (let i = 0; i < txState.bits.length && i < 120; i++) {
+        const x = bitStart + i * bitW;
+        if (i === txState.bitIndex) {
+            // Current bit marker
+            ctx.fillStyle = '#FF9800';
+            ctx.fillRect(x, bitY - 10, bitW - 1, 4);
+        }
+        ctx.fillStyle = txState.bits[i] === 1 ? '#4CAF50' : '#1a1a1a';
+        ctx.fillRect(x, bitY, bitW - 1, 10);
+
+        // Char boundaries
+        if (i > 0 && i % 8 === 0) {
+            ctx.strokeStyle = '#333'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(x, bitY - 2); ctx.lineTo(x, bitY + 12); ctx.stroke();
+        }
+    }
+
+    // RX bits at bottom
+    const rxY = H - 30;
+    ctx.fillStyle = '#555'; ctx.font = '10px monospace'; ctx.textAlign = 'left';
+    ctx.fillText('RX:', 60, rxY + 4);
+
+    for (let i = 0; i < txState.received.length && i < 120; i++) {
+        const x = bitStart + i * bitW;
+        ctx.fillStyle = txState.received[i] === 1 ? '#2196F3' : '#1a1a1a';
+        ctx.fillRect(x, rxY, bitW - 1, 10);
+        if (i > 0 && i % 8 === 0) {
+            ctx.strokeStyle = '#333'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(x, rxY - 2); ctx.lineTo(x, rxY + 12); ctx.stroke();
+        }
+    }
+
+    // Message labels
+    ctx.textAlign = 'left';
+    if (txState.message) {
+        ctx.fillStyle = '#FF9800'; ctx.font = '13px monospace';
+        ctx.fillText('Sending: "' + txState.message + '"', bitStart, bitY - 14);
+    }
+    if (txState.receivedText) {
+        ctx.fillStyle = '#2196F3'; ctx.font = '13px monospace';
+        ctx.fillText('Received: "' + txState.receivedText + '"', bitStart, rxY + 26);
+    }
+
+    // Status
+    ctx.fillStyle = '#555'; ctx.font = '11px monospace'; ctx.textAlign = 'right';
+    const pct = txState.bits.length > 0 ? Math.floor(txState.received.length / txState.bits.length * 100) : 0;
+    ctx.fillText(
+        `${txState.received.length}/${txState.bits.length} bits | ${pct}% | ${txState.spikes.length} in flight`,
+        W - 20, H - 10
+    );
+}
+
+txBuildNetwork();
+
 // ─── Main Loop ───────────────────────────────────────────────
 initNetwork(); initRadio(); initBio();
 
@@ -773,6 +1149,7 @@ function mainLoop() {
     updateNetwork(); drawNetwork();
     updateRadio(); drawRadio();
     updateBio(); drawBio();
+    updateTransmit(); drawTransmit();
     requestAnimationFrame(mainLoop);
 }
 mainLoop();

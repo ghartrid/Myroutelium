@@ -122,6 +122,7 @@ canvas { display: block; margin: 0 auto; border-radius: 8px; background: #111; b
     <div class="tab" onclick="showPanel('bio')">Bio Substrate</div>
     <div class="tab" onclick="showPanel('transmit')">Text Transmission</div>
     <div class="tab" onclick="showPanel('imgtx')">Image Transmission</div>
+    <div class="tab" onclick="showPanel('encrypt')">Mycelium Encryption</div>
 </div>
 
 <!-- ════════ Architecture Panel ════════ -->
@@ -362,13 +363,64 @@ canvas { display: block; margin: 0 auto; border-radius: 8px; background: #111; b
     </div>
 </div>
 
+<!-- ════════ Mycelium Encryption Panel ════════ -->
+<div id="encrypt" class="panel">
+    <canvas id="encryptCanvas" width="1000" height="480"></canvas>
+    <div style="display:flex; gap:12px; justify-content:center; align-items:center; margin:12px 0; flex-wrap:wrap;">
+        <input id="encInput" type="text" value="SECRET MESSAGE" maxlength="30"
+            style="padding:8px 16px; background:#111; border:1px solid #4CAF50; border-radius:4px;
+                   color:#4CAF50; font-size:1em; width:240px; font-family:monospace;"
+            onkeydown="if(event.key==='Enter') encSend()">
+        <button class="btn" onclick="encSend()">Encrypt &amp; Transmit</button>
+        <button class="btn orange" onclick="encEavesdrop()">Eavesdrop (tap single path)</button>
+        <button class="btn" onclick="encRegrow()">Regrow Network (new key)</button>
+        <button class="btn red" onclick="encReset()">Reset</button>
+    </div>
+    <div style="display:flex; gap:16px; max-width:1050px; margin:0 auto;">
+        <div class="info" style="flex:1;">
+            <h3 style="color:#4CAF50;">Sender</h3>
+            <p>
+                Plaintext: <span id="encPlain" style="color:#4CAF50; font-family:monospace;"></span><br>
+                Shares: <span class="stat" id="encShares">0</span> paths &times;
+                <span class="stat" id="encShareBits">0</span> bits each<br>
+                <span style="color:#888; font-size:0.85em;">Data split + XOR masked with biological path signatures</span>
+            </p>
+        </div>
+        <div class="info" style="flex:1;">
+            <h3 style="color:#f44336;">Eavesdropper</h3>
+            <p>
+                Intercepted: <span id="encEavesDrop" style="color:#f44336; font-family:monospace;">---</span><br>
+                <span style="color:#888; font-size:0.85em;" id="encEavesInfo">Tap a single hypha to see what an attacker gets</span>
+            </p>
+        </div>
+        <div class="info" style="flex:1;">
+            <h3 style="color:#2196F3;">Receiver</h3>
+            <p>
+                Decrypted: <span id="encDecrypted" style="color:#2196F3; font-family:monospace;"></span><br>
+                Key age: <span class="stat" id="encKeyAge">0</span> bio-seconds<br>
+                <span style="color:#888; font-size:0.85em;">Recombines all path shares + reverses bio-transform</span>
+            </p>
+        </div>
+    </div>
+    <div class="info">
+        <h3>Mycelium Encryption — Living Cryptography</h3>
+        <p>
+            <strong style="color:#FF9800;">Four security layers:</strong><br>
+            <strong>1. Secret Sharing</strong> — Data is split into N shares across N biological paths. No single path carries the complete message (Shamir-like).<br>
+            <strong>2. Biological Path Signature</strong> — Each share is XOR-masked with a key derived from the path's physical properties (segment diameters, lengths, ion channel states). The network topology <em>is</em> the encryption key.<br>
+            <strong>3. Temporal Key Rotation</strong> — The mycelium grows and changes continuously. The key is different every time — a <span class="stat">living one-time pad</span>.<br>
+            <strong>4. Physical Security</strong> — Tapping a single hypha yields only a masked fragment. Destroying the network destroys the key. No digital copy of the key ever exists.
+        </p>
+    </div>
+</div>
+
 <script>
 // ─── Tab Navigation ──────────────────────────────────────────
 function showPanel(id) {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.getElementById(id).classList.add('active');
-    const tabMap = { arch: 'Architecture', network: 'Network', radio: 'Physical', bio: 'Bio', transmit: 'Text T', imgtx: 'Image' };
+    const tabMap = { arch: 'Architecture', network: 'Network', radio: 'Physical', bio: 'Bio', transmit: 'Text T', imgtx: 'Image', encrypt: 'Mycelium E' };
     document.querySelectorAll('.tab').forEach(t => {
         if (t.textContent.includes(tabMap[id] || '')) t.classList.add('active');
     });
@@ -1662,6 +1714,415 @@ function drawImage() {
 
 imgBuildNetwork();
 
+// ═══════════════════════════════════════════════════════════════
+// MYCELIUM ENCRYPTION VISUALIZATION
+// ═══════════════════════════════════════════════════════════════
+const encCanvas = document.getElementById('encryptCanvas');
+const encCtx = encCanvas.getContext('2d');
+
+const ENC_PATHS = 5;
+
+let enc = {
+    sending: false,
+    plaintext: '',
+    plainBytes: [],
+    shares: [],          // one share per path: array of masked bytes
+    pathKeys: [],        // biological key per path (derived from topology)
+    network: { nodes: [], links: [], paths: [] },
+    packets: [],         // {shareIdx, byteIdx, value, progress, pathIdx, alive}
+    received: [],        // received shares per path: [path][bytes]
+    decryptedText: '',
+    eavesPath: -1,       // which path is tapped (-1 = none)
+    eavesData: [],       // raw bytes captured by eavesdropper
+    eavesText: '',
+    tick: 0,
+    keyAge: 0,           // bio-seconds since last key change
+    growthEvents: 0,
+};
+
+function encBuildNetwork() {
+    const nodes = [], links = [], paths = [];
+    const W = 1000, H = 480;
+    const srcX = 70, dstX = 930;
+
+    nodes.push({ x: srcX, y: H/2, type: 'src', calcium: 0, alive: true });
+    nodes.push({ x: dstX, y: H/2, type: 'dst', calcium: 0, alive: true });
+
+    const pathNodes = [];
+    for (let p = 0; p < ENC_PATHS; p++) {
+        const yBase = 70 + p * ((H - 140) / (ENC_PATHS - 1));
+        const nNodes = 5 + Math.floor(Math.random() * 4);
+        const thisPath = [];
+
+        for (let n = 0; n < nNodes; n++) {
+            const t = (n + 1) / (nNodes + 1);
+            const x = lerp(srcX + 50, dstX - 50, t) + (Math.random() - 0.5) * 25;
+            const y = yBase + Math.sin(t * Math.PI * 1.5) * 20 + (Math.random() - 0.5) * 25;
+            const id = nodes.length;
+            // Each node gets unique biological properties
+            nodes.push({
+                x, y, type: 'relay', calcium: 0, alive: true,
+                ionState: Math.random(),  // unique ion channel state
+            });
+            thisPath.push(id);
+        }
+        pathNodes.push(thisPath);
+
+        const fullPath = [0, ...thisPath, 1];
+        for (let i = 0; i < fullPath.length - 1; i++) {
+            links.push({
+                a: fullPath[i], b: fullPath[i+1],
+                diameter: 2 + Math.random() * 5,
+                length: dist(nodes[fullPath[i]], nodes[fullPath[i+1]]),
+                flow: 0, calcium: 0, pathIdx: p, alive: true,
+                ionSignature: Math.random(), // unique per segment
+            });
+        }
+        paths.push(fullPath);
+    }
+
+    // Cross-connections
+    for (let p = 0; p < ENC_PATHS - 1; p++) {
+        const a = pathNodes[p], b = pathNodes[p+1];
+        for (let i = 0; i < Math.min(a.length, b.length); i++) {
+            if (Math.random() < 0.3) {
+                links.push({
+                    a: a[i], b: b[i], diameter: 1 + Math.random(),
+                    length: dist(nodes[a[i]], nodes[b[i]]),
+                    flow: 0, calcium: 0, pathIdx: -1, alive: true,
+                    ionSignature: Math.random(),
+                });
+            }
+        }
+    }
+
+    enc.network = { nodes, links, paths };
+    enc.keyAge = 0;
+    enc.growthEvents++;
+
+    // Derive biological key for each path
+    enc.pathKeys = [];
+    for (let p = 0; p < ENC_PATHS; p++) {
+        const key = [];
+        const pathLinks = links.filter(l => l.pathIdx === p);
+        // Key is derived from physical properties of each segment
+        for (let i = 0; i < 32; i++) {
+            let k = 0;
+            pathLinks.forEach((l, j) => {
+                // Combine diameter, length, ion signature into key bytes
+                k ^= Math.floor(l.diameter * 37 + l.length * 13 + l.ionSignature * 251 + i * 7 + j * 19) & 0xFF;
+            });
+            // Also mix in node ion states
+            paths[p].forEach((nid, j) => {
+                if (nodes[nid].ionState !== undefined)
+                    k ^= Math.floor(nodes[nid].ionState * 199 + i * 11 + j * 23) & 0xFF;
+            });
+            key.push(k & 0xFF);
+        }
+        enc.pathKeys.push(key);
+    }
+}
+
+function encSend() {
+    const text = document.getElementById('encInput').value;
+    if (!text) return;
+
+    enc.plaintext = text;
+    enc.plainBytes = [];
+    for (let i = 0; i < text.length; i++) enc.plainBytes.push(text.charCodeAt(i));
+
+    // Pad to multiple of ENC_PATHS
+    while (enc.plainBytes.length % ENC_PATHS !== 0) enc.plainBytes.push(0);
+
+    // Split into shares using XOR secret sharing
+    // For each byte position, split across paths such that XOR of all shares = plaintext
+    enc.shares = [];
+    for (let p = 0; p < ENC_PATHS; p++) enc.shares.push([]);
+
+    for (let i = 0; i < enc.plainBytes.length; i++) {
+        const plain = enc.plainBytes[i];
+        let xorAccum = 0;
+        // First N-1 paths get random shares XOR'd with path key
+        for (let p = 0; p < ENC_PATHS - 1; p++) {
+            const keyByte = enc.pathKeys[p][i % enc.pathKeys[p].length];
+            const share = (Math.floor(Math.random() * 256)) ^ keyByte;
+            enc.shares[p].push(share & 0xFF);
+            xorAccum ^= share;
+        }
+        // Last path gets the share that makes XOR of all = plaintext ^ lastKey
+        const lastKey = enc.pathKeys[ENC_PATHS-1][i % enc.pathKeys[ENC_PATHS-1].length];
+        enc.shares[ENC_PATHS-1].push((plain ^ xorAccum ^ lastKey) & 0xFF);
+    }
+
+    // Initialize receive buffers
+    enc.received = [];
+    for (let p = 0; p < ENC_PATHS; p++) enc.received.push([]);
+
+    enc.packets = [];
+    enc.decryptedText = '';
+    enc.eavesData = [];
+    enc.eavesText = '';
+    enc.sending = true;
+    enc.tick = 0;
+    enc.eavesPath = -1;
+
+    document.getElementById('encPlain').textContent = text;
+    document.getElementById('encShares').textContent = ENC_PATHS;
+    document.getElementById('encShareBits').textContent = enc.shares[0].length * 8;
+    document.getElementById('encDecrypted').textContent = '';
+    document.getElementById('encEavesDrop').textContent = '---';
+    document.getElementById('encEavesInfo').textContent = 'Tap a single hypha to see what an attacker gets';
+}
+
+function encEavesdrop() {
+    if (!enc.sending && enc.received.length === 0) return;
+    enc.eavesPath = Math.floor(Math.random() * ENC_PATHS);
+
+    // What does the eavesdropper see on this single path?
+    const share = enc.shares[enc.eavesPath];
+    if (!share || share.length === 0) {
+        document.getElementById('encEavesDrop').textContent = '(no data yet)';
+        return;
+    }
+
+    // Try to decode the share as text — it'll be garbage
+    let garbled = '';
+    for (let i = 0; i < Math.min(share.length, enc.plaintext.length); i++) {
+        const c = share[i] % 126;
+        garbled += c >= 32 ? String.fromCharCode(c) : '.';
+    }
+    enc.eavesText = garbled;
+    document.getElementById('encEavesDrop').textContent = garbled;
+    document.getElementById('encEavesInfo').textContent =
+        `Tapped Path ${enc.eavesPath} — gets 1/${ENC_PATHS} of data, XOR-masked with biological key. Unreadable.`;
+}
+
+function encRegrow() {
+    encBuildNetwork();
+    document.getElementById('encKeyAge').textContent = '0';
+    if (enc.plaintext) {
+        // Re-encrypt with new key (demonstrate key rotation)
+        encSend();
+    }
+}
+
+function encReset() {
+    enc.sending = false;
+    enc.packets = [];
+    enc.plaintext = '';
+    enc.decryptedText = '';
+    enc.eavesPath = -1;
+    enc.eavesData = [];
+    enc.eavesText = '';
+    document.getElementById('encPlain').textContent = '';
+    document.getElementById('encDecrypted').textContent = '';
+    document.getElementById('encEavesDrop').textContent = '---';
+    encBuildNetwork();
+}
+
+function updateEncrypt() {
+    enc.tick++;
+    enc.keyAge += 5; // 5 bio-seconds per tick
+    document.getElementById('encKeyAge').textContent = enc.keyAge.toLocaleString();
+
+    if (!enc.sending) return;
+
+    // Launch share packets (all paths simultaneously)
+    const BYTES_PER_FRAME = 1;
+    const byteIdx = Math.floor(enc.tick / 6);
+
+    if (byteIdx < enc.shares[0].length && enc.tick % 6 === 0) {
+        for (let p = 0; p < ENC_PATHS; p++) {
+            enc.packets.push({
+                shareIdx: p,
+                byteIdx: byteIdx,
+                value: enc.shares[p][byteIdx],
+                progress: 0,
+                pathIdx: p,
+                alive: true,
+            });
+        }
+    }
+
+    // Move packets
+    enc.packets.forEach(pkt => {
+        if (!pkt.alive) return;
+        pkt.progress += 0.02 + Math.random() * 0.008;
+
+        const path = enc.network.paths[pkt.pathIdx];
+        if (path) {
+            const idx = Math.floor(pkt.progress * (path.length - 1));
+            if (idx < path.length) {
+                const node = enc.network.nodes[path[idx]];
+                if (node) node.calcium = Math.max(node.calcium, 0.8);
+            }
+            enc.network.links.forEach(l => {
+                if (l.pathIdx === pkt.pathIdx) l.flow = Math.max(l.flow, 0.4);
+            });
+        }
+
+        // Eavesdropper highlight
+        if (pkt.pathIdx === enc.eavesPath) {
+            // Tapped — visually mark
+        }
+
+        if (pkt.progress >= 1.0) {
+            pkt.alive = false;
+            enc.received[pkt.shareIdx].push(pkt.value);
+
+            // Check if all paths delivered this byte
+            const minReceived = Math.min(...enc.received.map(r => r.length));
+            if (minReceived > enc.decryptedText.length) {
+                // Decrypt: XOR all shares, then XOR with path keys
+                const bytePos = enc.decryptedText.length;
+                let xorAll = 0;
+                for (let p = 0; p < ENC_PATHS; p++) {
+                    let share = enc.received[p][bytePos];
+                    // Reverse the key masking
+                    const keyByte = enc.pathKeys[p][bytePos % enc.pathKeys[p].length];
+                    share ^= keyByte;
+                    xorAll ^= share;
+                }
+                if (xorAll > 0 && xorAll < 128) {
+                    enc.decryptedText += String.fromCharCode(xorAll);
+                } else if (xorAll === 0 && bytePos >= enc.plaintext.length) {
+                    // padding
+                } else {
+                    enc.decryptedText += '.';
+                }
+                document.getElementById('encDecrypted').textContent = enc.decryptedText;
+            }
+        }
+    });
+
+    enc.packets = enc.packets.filter(p => p.alive);
+
+    // Decay
+    enc.network.nodes.forEach(n => { n.calcium *= 0.88; });
+    enc.network.links.forEach(l => { l.flow *= 0.85; });
+
+    // Done check
+    if (enc.received.length > 0 && enc.received[0].length >= enc.shares[0].length && enc.packets.length === 0) {
+        enc.sending = false;
+    }
+}
+
+function drawEncrypt() {
+    const ctx = encCtx, W = 1000, H = 480;
+    ctx.fillStyle = '#0a0a12'; ctx.fillRect(0, 0, W, H);
+
+    const { nodes, links, paths } = enc.network;
+
+    // Draw links
+    links.forEach(l => {
+        const a = nodes[l.a], b = nodes[l.b];
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+
+        let color, width;
+        if (l.pathIdx === enc.eavesPath && enc.eavesPath >= 0) {
+            // Tapped path — red
+            color = `rgba(244,67,54,${0.3 + l.flow * 0.7})`;
+            width = l.diameter * 0.5 + l.flow * 2;
+        } else if (l.flow > 0.1) {
+            // Active path — green intensity based on path index for visual distinction
+            const hue = 90 + (l.pathIdx * 40) % 200;
+            color = `hsla(${hue},70%,${30 + l.flow * 30}%,${0.3 + l.flow * 0.6})`;
+            width = l.diameter * 0.4 + l.flow * 2.5;
+        } else if (l.pathIdx >= 0) {
+            const hue = 90 + (l.pathIdx * 40) % 200;
+            color = `hsla(${hue},40%,20%,0.2)`;
+            width = l.diameter * 0.3;
+        } else {
+            color = 'rgba(76,175,80,0.1)';
+            width = l.diameter * 0.2;
+        }
+        ctx.strokeStyle = color; ctx.lineWidth = width; ctx.stroke();
+    });
+
+    // Draw nodes
+    nodes.forEach((n, i) => {
+        const r = n.type === 'src' || n.type === 'dst' ? 10 : 2.5;
+        if (n.calcium > 0.15) {
+            ctx.beginPath(); ctx.arc(n.x, n.y, r + 5 + n.calcium * 6, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(156,39,176,${Math.min(n.calcium * 0.4, 0.4)})`;
+            ctx.fill();
+        }
+        ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+        if (n.type === 'src') ctx.fillStyle = '#4CAF50';
+        else if (n.type === 'dst') ctx.fillStyle = '#2196F3';
+        else ctx.fillStyle = '#4a7a4a';
+        ctx.fill();
+        if (n.type === 'src' || n.type === 'dst') {
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+        }
+    });
+
+    // Draw packets
+    enc.packets.forEach(pkt => {
+        if (!pkt.alive) return;
+        const path = paths[pkt.pathIdx];
+        if (!path) return;
+
+        const floatIdx = pkt.progress * (path.length - 1);
+        const idx = Math.floor(floatIdx);
+        const frac = floatIdx - idx;
+        if (idx >= path.length - 1) return;
+
+        const a = nodes[path[idx]], b = nodes[path[idx+1]];
+        const px = lerp(a.x, b.x, frac), py = lerp(a.y, b.y, frac);
+
+        // Each path gets a distinct color
+        const hue = 90 + (pkt.pathIdx * 40) % 200;
+        const isTapped = pkt.pathIdx === enc.eavesPath;
+
+        ctx.beginPath(); ctx.arc(px, py, isTapped ? 5 : 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = isTapped ? 'rgba(244,67,54,0.9)' : `hsla(${hue},80%,60%,0.9)`;
+        ctx.fill();
+
+        // Glow
+        ctx.beginPath(); ctx.arc(px, py, 8, 0, Math.PI * 2);
+        ctx.fillStyle = isTapped ? 'rgba(244,67,54,0.15)' : `hsla(${hue},60%,40%,0.12)`;
+        ctx.fill();
+
+        // Show share value as tiny hex
+        ctx.fillStyle = '#fff'; ctx.font = '7px monospace'; ctx.textAlign = 'center';
+        ctx.fillText(pkt.value.toString(16).padStart(2, '0').toUpperCase(), px, py - 7);
+    });
+
+    // Labels
+    ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center';
+    ctx.fillStyle = '#4CAF50'; ctx.fillText('SENDER', nodes[0].x, nodes[0].y - 18);
+    ctx.fillStyle = '#2196F3'; ctx.fillText('RECEIVER', nodes[1].x, nodes[1].y - 18);
+
+    // Path labels
+    ctx.font = '9px monospace'; ctx.textAlign = 'right';
+    for (let p = 0; p < paths.length; p++) {
+        const firstRelay = nodes[paths[p][1]];
+        if (!firstRelay) continue;
+        const isTapped = p === enc.eavesPath;
+        ctx.fillStyle = isTapped ? '#f44336' : '#555';
+        ctx.fillText(isTapped ? `Path ${p} [TAPPED]` : `Path ${p}`, firstRelay.x - 5, firstRelay.y - 4);
+    }
+
+    // Lock icon for encrypted paths
+    if (enc.sending || enc.decryptedText) {
+        ctx.font = '16px serif'; ctx.textAlign = 'center';
+        ctx.fillStyle = '#FF9800';
+        ctx.fillText('🔒', (nodes[0].x + nodes[1].x) / 2, 25);
+        ctx.font = '10px monospace'; ctx.fillStyle = '#888';
+        ctx.fillText(`${ENC_PATHS}-path secret sharing + biological key XOR`, (nodes[0].x + nodes[1].x) / 2, 42);
+    }
+
+    // Eavesdropper indicator
+    if (enc.eavesPath >= 0) {
+        ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
+        ctx.fillStyle = '#f44336';
+        ctx.fillText(`EAVESDROPPER ON PATH ${enc.eavesPath}`, W / 2, H - 12);
+    }
+}
+
+encBuildNetwork();
+
 // ─── Main Loop ───────────────────────────────────────────────
 initNetwork(); initRadio(); initBio();
 
@@ -1671,6 +2132,7 @@ function mainLoop() {
     updateBio(); drawBio();
     updateTransmit(); drawTransmit();
     updateImage(); drawImage();
+    updateEncrypt(); drawEncrypt();
     requestAnimationFrame(mainLoop);
 }
 mainLoop();

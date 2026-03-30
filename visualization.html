@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Myroutelium — Biological Routing Visualized</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', system-ui, sans-serif; overflow-x: hidden; }
+
+header {
+    text-align: center; padding: 40px 20px 20px;
+    background: linear-gradient(180deg, #0d1a0d 0%, #0a0a0a 100%);
+}
+header h1 { font-size: 2.8em; color: #4CAF50; letter-spacing: 2px; }
+header h1 span { color: #FF9800; }
+header p { color: #888; font-size: 1.1em; margin-top: 8px; }
+
+.tabs {
+    display: flex; justify-content: center; gap: 4px; padding: 20px;
+    position: sticky; top: 0; background: #0a0a0a; z-index: 100;
+    border-bottom: 1px solid #222;
+}
+.tab {
+    padding: 10px 24px; border: 1px solid #333; border-radius: 6px;
+    cursor: pointer; font-size: 0.95em; transition: all 0.2s;
+    background: #111; color: #888;
+}
+.tab:hover { border-color: #4CAF50; color: #ccc; }
+.tab.active { background: #1a2e1a; border-color: #4CAF50; color: #4CAF50; }
+
+.panel { display: none; padding: 20px; max-width: 1200px; margin: 0 auto; }
+.panel.active { display: block; }
+
+canvas { display: block; margin: 0 auto; border-radius: 8px; background: #111; border: 1px solid #222; }
+
+.controls {
+    display: flex; gap: 12px; justify-content: center; margin: 16px 0;
+    flex-wrap: wrap;
+}
+.btn {
+    padding: 8px 20px; border: 1px solid #4CAF50; border-radius: 4px;
+    background: transparent; color: #4CAF50; cursor: pointer;
+    font-size: 0.9em; transition: all 0.2s;
+}
+.btn:hover { background: #1a2e1a; }
+.btn.active { background: #4CAF50; color: #000; }
+.btn.orange { border-color: #FF9800; color: #FF9800; }
+.btn.orange:hover { background: #2e1a0a; }
+.btn.orange.active { background: #FF9800; color: #000; }
+.btn.red { border-color: #f44336; color: #f44336; }
+.btn.red:hover { background: #2e0a0a; }
+
+.info {
+    background: #111; border: 1px solid #222; border-radius: 8px;
+    padding: 16px; margin: 16px 0; font-size: 0.9em; line-height: 1.6;
+}
+.info h3 { color: #4CAF50; margin-bottom: 8px; }
+.info .stat { color: #FF9800; font-weight: bold; }
+
+.legend {
+    display: flex; gap: 20px; justify-content: center; margin: 12px 0;
+    flex-wrap: wrap; font-size: 0.85em;
+}
+.legend-item { display: flex; align-items: center; gap: 6px; }
+.legend-dot {
+    width: 12px; height: 12px; border-radius: 50%;
+}
+
+.arch-diagram {
+    display: flex; flex-direction: column; gap: 0; max-width: 800px;
+    margin: 20px auto;
+}
+.arch-layer {
+    border: 2px solid #333; border-radius: 8px; padding: 24px;
+    position: relative; transition: all 0.3s;
+}
+.arch-layer:hover { border-color: #4CAF50; transform: scale(1.01); }
+.arch-layer h3 { font-size: 1.2em; margin-bottom: 8px; }
+.arch-layer p { color: #999; font-size: 0.9em; line-height: 1.5; }
+.arch-layer .tag {
+    position: absolute; top: -12px; right: 20px;
+    background: #0a0a0a; padding: 2px 10px; border-radius: 4px;
+    font-size: 0.75em; border: 1px solid;
+}
+.arch-arrow {
+    text-align: center; font-size: 1.5em; color: #555; padding: 4px 0;
+}
+.l3 { border-color: #2196F3; background: #0d1520; }
+.l3 h3 { color: #2196F3; }
+.l3 .tag { color: #2196F3; border-color: #2196F3; }
+.l2 { border-color: #FF9800; background: #1a150d; }
+.l2 h3 { color: #FF9800; }
+.l2 .tag { color: #FF9800; border-color: #FF9800; }
+.l1 { border-color: #4CAF50; background: #0d1a0d; }
+.l1 h3 { color: #4CAF50; }
+.l1 .tag { color: #4CAF50; border-color: #4CAF50; }
+
+.bio-features {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px; margin: 16px 0;
+}
+.bio-feat {
+    background: #111; border: 1px solid #222; border-radius: 6px;
+    padding: 12px; font-size: 0.85em;
+}
+.bio-feat h4 { color: #4CAF50; margin-bottom: 4px; font-size: 0.95em; }
+.bio-feat span { color: #FF9800; }
+</style>
+</head>
+<body>
+
+<header>
+    <h1>Myroute<span>lium</span></h1>
+    <p>Three-Layer Biological Routing System — Fungal-Inspired Network Architecture</p>
+</header>
+
+<div class="tabs">
+    <div class="tab active" onclick="showPanel('arch')">Architecture</div>
+    <div class="tab" onclick="showPanel('network')">Network Layer</div>
+    <div class="tab" onclick="showPanel('radio')">Physical Layer</div>
+    <div class="tab" onclick="showPanel('bio')">Bio Substrate</div>
+</div>
+
+<!-- ════════ Architecture Panel ════════ -->
+<div id="arch" class="panel active">
+    <div class="arch-diagram">
+        <div class="arch-layer l3">
+            <div class="tag">LAYER 3</div>
+            <h3>Network Routing</h3>
+            <p>
+                Probabilistic multi-path routing with <strong>two-tier signaling</strong>:<br>
+                <strong style="color:#64B5F6">Nutrient scores</strong> (slow data plane) — links strengthen with successful traffic, decay when idle<br>
+                <strong style="color:#FF9800">Ca2+ calcium signals</strong> (fast control plane) — propagate 3x faster, warn of congestion/failure/optimal paths
+            </p>
+        </div>
+        <div class="arch-arrow">&#x2B07; calcium signals flow down &#x2B07;</div>
+        <div class="arch-layer l2">
+            <div class="tag">LAYER 2</div>
+            <h3>Adaptive Mesh Radio</h3>
+            <p>
+                Physical medium self-organizes using <strong>7 biological optimizations</strong>:<br>
+                <span style="color:#FF9800">Rhizomorphs</span> (trunk cables) &bull;
+                <span style="color:#FF9800">Anastomosis</span> (shortcut discovery) &bull;
+                <span style="color:#FF9800">Tropism</span> (beamforming) &bull;
+                <span style="color:#FF9800">Sleep scheduling</span> &bull;
+                <span style="color:#FF9800">Cooperative relay</span> &bull;
+                <span style="color:#FF9800">Preemptive Ca2+</span> &bull;
+                <span style="color:#FF9800">SNR hop penalty</span>
+            </p>
+        </div>
+        <div class="arch-arrow">&#x2B07; signals enter biological tissue &#x2B07;</div>
+        <div class="arch-layer l1">
+            <div class="tag">LAYER 1</div>
+            <h3>Biological Substrate</h3>
+            <p>
+                Living mycelial network as computing medium:<br>
+                <span style="color:#4CAF50">Hodgkin-Huxley ion dynamics</span> &bull;
+                <span style="color:#4CAF50">Hyphal growth &amp; branching</span> &bull;
+                <span style="color:#4CAF50">Calcium wave propagation</span> &bull;
+                <span style="color:#4CAF50">Electrode interface</span> &bull;
+                <span style="color:#4CAF50">Environmental response</span> &bull;
+                <span style="color:#4CAF50">Self-healing</span>
+            </p>
+        </div>
+    </div>
+
+    <div class="info">
+        <h3>The Key Insight: Biological SDN</h3>
+        <p>
+            Real fungi use two signaling systems at different speeds — just like software-defined networking separates control and data planes.
+            <strong style="color:#FF9800">Calcium signals</strong> (control plane) travel orders of magnitude faster than
+            <strong style="color:#64B5F6">nutrient transport</strong> (data plane), giving the network instant awareness of state changes
+            before the slower reinforcement learning adapts.
+        </p>
+    </div>
+</div>
+
+<!-- ════════ Network Layer Panel ════════ -->
+<div id="network" class="panel">
+    <canvas id="networkCanvas" width="1000" height="600"></canvas>
+    <div class="controls">
+        <button class="btn active" onclick="netAction('run')" id="netRunBtn">Running</button>
+        <button class="btn" onclick="netAction('pause')">Pause</button>
+        <button class="btn orange" onclick="netAction('calcium')">Trigger Ca2+ Wave</button>
+        <button class="btn red" onclick="netAction('fail')">Kill Random Link</button>
+        <button class="btn" onclick="netAction('reset')">Reset</button>
+    </div>
+    <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#4CAF50"></div> High nutrient</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f44336"></div> Low nutrient</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#FF9800"></div> Ca2+ signal</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#2196F3"></div> Active packet</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#555"></div> Dormant link</div>
+    </div>
+    <div class="info" id="netInfo">
+        <h3>Network Layer — Two-Tier Routing</h3>
+        <p>Watch nutrient scores (link color/width) build on used paths while calcium signals (orange pulses) propagate congestion warnings ahead of traffic.</p>
+    </div>
+</div>
+
+<!-- ════════ Physical Layer Panel ════════ -->
+<div id="radio" class="panel">
+    <canvas id="radioCanvas" width="1000" height="600"></canvas>
+    <div class="controls">
+        <button class="btn active" onclick="radioAction('run')" id="radioRunBtn">Running</button>
+        <button class="btn" onclick="radioAction('pause')">Pause</button>
+        <button class="btn orange" onclick="radioAction('traffic')">Surge Traffic</button>
+        <button class="btn red" onclick="radioAction('fail')">Kill Node</button>
+        <button class="btn" onclick="radioAction('reset')">Reset</button>
+    </div>
+    <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#4CAF50"></div> Active link</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#FF9800"></div> Rhizomorph (trunk)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#9C27B0"></div> Beamforming (tropism)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#2196F3"></div> Awake node</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#333"></div> Sleeping node</div>
+    </div>
+    <div class="bio-features">
+        <div class="bio-feat"><h4>Rhizomorphs</h4>High-traffic links form <span>trunk cables</span> with 2.5x channel bonding</div>
+        <div class="bio-feat"><h4>Anastomosis</h4>Network discovers <span>shortcuts</span> that bypass multi-hop chains</div>
+        <div class="bio-feat"><h4>Tropism</h4>Antenna gain focuses <span>toward active neighbors</span> (up to 6dB)</div>
+        <div class="bio-feat"><h4>Sleep</h4>Idle nodes enter <span>dormancy</span> — wake on Ca2+ signal</div>
+        <div class="bio-feat"><h4>Cooperative Relay</h4>Skip intermediate hops when <span>direct link</span> has good SNR</div>
+        <div class="bio-feat"><h4>Preemptive Ca2+</h4>Congestion warnings at <span>60%</span> instead of 70%</div>
+        <div class="bio-feat"><h4>SNR Hop Penalty</h4>Fewer high-quality hops <span>beat</span> many weak ones</div>
+    </div>
+</div>
+
+<!-- ════════ Bio Substrate Panel ════════ -->
+<div id="bio" class="panel">
+    <canvas id="bioCanvas" width="1000" height="600"></canvas>
+    <div class="controls">
+        <button class="btn active" onclick="bioAction('run')" id="bioRunBtn">Growing</button>
+        <button class="btn" onclick="bioAction('pause')">Pause</button>
+        <button class="btn orange" onclick="bioAction('stimulate')">Stimulate Electrode</button>
+        <button class="btn red" onclick="bioAction('damage')">Damage Region</button>
+        <button class="btn" onclick="bioAction('reset')">Reset</button>
+    </div>
+    <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#4CAF50"></div> Healthy hypha</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#FF9800"></div> Rhizomorph</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#E91E63"></div> Growing tip</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#9C27B0"></div> Ca2+ wave</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#2196F3"></div> Electrode</div>
+    </div>
+    <div class="info" id="bioInfo">
+        <h3>Biological Substrate — Living Network</h3>
+        <p>
+            <span class="stat" id="bioSegs">0</span> segments &bull;
+            <span class="stat" id="bioTips">0</span> tips &bull;
+            <span class="stat" id="bioLen">0</span>mm total length &bull;
+            <span class="stat" id="bioTime">0</span>s bio-time
+        </p>
+    </div>
+</div>
+
+<script>
+// ─── Tab Navigation ──────────────────────────────────────────
+function showPanel(id) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.querySelectorAll('.tab').forEach(t => {
+        if (t.textContent.toLowerCase().includes(id.substring(0, 4))) t.classList.add('active');
+    });
+}
+
+// ─── Utility ─────────────────────────────────────────────────
+function lerp(a, b, t) { return a + (b - a) * t; }
+function dist(a, b) { return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2); }
+function hsl(h, s, l) { return `hsl(${h},${s}%,${l}%)`; }
+
+// ═══════════════════════════════════════════════════════════════
+// NETWORK LAYER VISUALIZATION
+// ═══════════════════════════════════════════════════════════════
+const netCanvas = document.getElementById('networkCanvas');
+const netCtx = netCanvas.getContext('2d');
+let netRunning = true;
+let netNodes = [], netLinks = [], netPackets = [], netCalciumWaves = [];
+
+function initNetwork() {
+    netNodes = []; netLinks = []; netPackets = []; netCalciumWaves = [];
+    const rows = 5, cols = 7, sx = 80, sy = 70, ox = 120, oy = 80;
+    for (let r = 0; r < rows; r++)
+        for (let c = 0; c < cols; c++)
+            netNodes.push({ x: ox + c * sx + (r % 2) * 20, y: oy + r * sy, nutrient: 0.3, id: r * cols + c });
+    for (let r = 0; r < rows; r++)
+        for (let c = 0; c < cols; c++) {
+            const i = r * cols + c;
+            if (c + 1 < cols) netLinks.push({ a: i, b: i + 1, nutrient: 0.3, flow: 0, dead: false });
+            if (r + 1 < rows) netLinks.push({ a: i, b: (r + 1) * cols + c, nutrient: 0.3, flow: 0, dead: false });
+            if (r + 1 < rows && c + 1 < cols && Math.random() < 0.3)
+                netLinks.push({ a: i, b: (r + 1) * cols + c + 1, nutrient: 0.2, flow: 0, dead: false });
+        }
+}
+
+function netAction(action) {
+    if (action === 'run') { netRunning = true; }
+    else if (action === 'pause') { netRunning = false; }
+    else if (action === 'calcium') {
+        const src = netNodes[Math.floor(Math.random() * netNodes.length)];
+        netCalciumWaves.push({ x: src.x, y: src.y, radius: 0, maxRadius: 300, strength: 1.0 });
+    }
+    else if (action === 'fail') {
+        const alive = netLinks.filter(l => !l.dead);
+        if (alive.length) alive[Math.floor(Math.random() * alive.length)].dead = true;
+    }
+    else if (action === 'reset') { initNetwork(); }
+}
+
+function updateNetwork() {
+    if (!netRunning) return;
+    // Decay
+    netLinks.forEach(l => { if (!l.dead) { l.nutrient *= 0.998; l.flow *= 0.9; } });
+    // Random packets
+    if (Math.random() < 0.15) {
+        const src = Math.floor(Math.random() * netNodes.length);
+        let dst = Math.floor(Math.random() * netNodes.length);
+        while (dst === src) dst = Math.floor(Math.random() * netNodes.length);
+        netPackets.push({ src, dst, pos: 0, path: findPath(src, dst), age: 0 });
+    }
+    // Move packets
+    netPackets.forEach(p => {
+        p.age++;
+        if (p.path && p.path.length > 1) {
+            p.pos += 0.05;
+            const idx = Math.floor(p.pos);
+            if (idx < p.path.length - 1) {
+                // Reinforce
+                const link = netLinks.find(l => !l.dead &&
+                    ((l.a === p.path[idx] && l.b === p.path[idx + 1]) ||
+                     (l.b === p.path[idx] && l.a === p.path[idx + 1])));
+                if (link) { link.nutrient = Math.min(1, link.nutrient + 0.02); link.flow += 0.1; }
+            }
+        }
+    });
+    netPackets = netPackets.filter(p => p.age < 80 && p.path && p.pos < p.path.length);
+    // Calcium waves
+    netCalciumWaves.forEach(w => { w.radius += 4; w.strength *= 0.98; });
+    netCalciumWaves = netCalciumWaves.filter(w => w.strength > 0.05);
+    // Calcium affects nearby link nutrients
+    netCalciumWaves.forEach(w => {
+        netLinks.forEach(l => {
+            if (l.dead) return;
+            const mid = { x: (netNodes[l.a].x + netNodes[l.b].x) / 2, y: (netNodes[l.a].y + netNodes[l.b].y) / 2 };
+            const d = dist(w, mid);
+            if (Math.abs(d - w.radius) < 20) l.nutrient = Math.min(1, l.nutrient + 0.01 * w.strength);
+        });
+    });
+}
+
+function findPath(src, dst) {
+    const prev = {}, visited = new Set(), queue = [src];
+    prev[src] = null; visited.add(src);
+    while (queue.length) {
+        const n = queue.shift();
+        if (n === dst) break;
+        netLinks.filter(l => !l.dead && (l.a === n || l.b === n)).forEach(l => {
+            const next = l.a === n ? l.b : l.a;
+            if (!visited.has(next)) { visited.add(next); prev[next] = n; queue.push(next); }
+        });
+    }
+    if (!(dst in prev)) return null;
+    const path = []; let c = dst;
+    while (c !== null) { path.unshift(c); c = prev[c]; }
+    return path;
+}
+
+function drawNetwork() {
+    const ctx = netCtx, W = netCanvas.width, H = netCanvas.height;
+    ctx.fillStyle = '#111'; ctx.fillRect(0, 0, W, H);
+
+    // Calcium waves
+    netCalciumWaves.forEach(w => {
+        ctx.beginPath(); ctx.arc(w.x, w.y, w.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(255,152,0,${w.strength * 0.5})`; ctx.lineWidth = 3; ctx.stroke();
+    });
+
+    // Links
+    netLinks.forEach(l => {
+        const a = netNodes[l.a], b = netNodes[l.b];
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+        if (l.dead) { ctx.strokeStyle = '#333'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]); }
+        else {
+            const h = lerp(0, 120, l.nutrient);
+            ctx.strokeStyle = hsl(h, 70, 30 + l.nutrient * 30);
+            ctx.lineWidth = 1 + l.nutrient * 4 + l.flow * 2;
+            ctx.setLineDash([]);
+        }
+        ctx.stroke(); ctx.setLineDash([]);
+    });
+
+    // Nodes
+    netNodes.forEach(n => {
+        ctx.beginPath(); ctx.arc(n.x, n.y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#2196F3'; ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
+    });
+
+    // Packets
+    netPackets.forEach(p => {
+        if (!p.path || p.path.length < 2) return;
+        const idx = Math.floor(p.pos), frac = p.pos - idx;
+        if (idx >= p.path.length - 1) return;
+        const a = netNodes[p.path[idx]], b = netNodes[p.path[idx + 1]];
+        const px = lerp(a.x, b.x, frac), py = lerp(a.y, b.y, frac);
+        ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#2196F3'; ctx.fill();
+        // Trail
+        ctx.beginPath(); ctx.arc(px, py, 8, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(33,150,243,0.2)'; ctx.fill();
+    });
+
+    // Tick counter
+    ctx.fillStyle = '#555'; ctx.font = '12px monospace';
+    ctx.fillText(`Links: ${netLinks.filter(l=>!l.dead).length} | Packets: ${netPackets.length} | Ca2+ waves: ${netCalciumWaves.length}`, 10, H - 10);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PHYSICAL LAYER VISUALIZATION
+// ═══════════════════════════════════════════════════════════════
+const radioCanvas = document.getElementById('radioCanvas');
+const radioCtx = radioCanvas.getContext('2d');
+let radioRunning = true;
+let radioNodes = [], radioLinks = [], radioTraffic = 0.5;
+
+function initRadio() {
+    radioNodes = []; radioLinks = [];
+    const n = 25;
+    for (let i = 0; i < n; i++) {
+        radioNodes.push({
+            x: 100 + Math.random() * 800, y: 80 + Math.random() * 440,
+            power: 0.5, sleeping: false, alive: true,
+            tropism: {}, id: i
+        });
+    }
+    // Connect nearby nodes
+    for (let i = 0; i < n; i++)
+        for (let j = i + 1; j < n; j++) {
+            const d = dist(radioNodes[i], radioNodes[j]);
+            if (d < 200) {
+                const snr = Math.max(0, 30 - d * 0.15 + (Math.random() - 0.5) * 8);
+                radioLinks.push({
+                    a: i, b: j, snr, nutrient: 0.4, flow: 0,
+                    rhizomorph: false, rhizoTicks: 0, tropismGain: 0, active: snr > 5
+                });
+            }
+        }
+}
+
+function radioAction(action) {
+    if (action === 'run') radioRunning = true;
+    else if (action === 'pause') radioRunning = false;
+    else if (action === 'traffic') radioTraffic = Math.min(radioTraffic + 0.5, 3);
+    else if (action === 'fail') {
+        const alive = radioNodes.filter(n => n.alive);
+        if (alive.length > 3) {
+            const victim = alive[Math.floor(Math.random() * alive.length)];
+            victim.alive = false;
+        }
+    }
+    else if (action === 'reset') { initRadio(); radioTraffic = 0.5; }
+}
+
+function updateRadio() {
+    if (!radioRunning) return;
+
+    radioLinks.forEach(l => {
+        if (!radioNodes[l.a].alive || !radioNodes[l.b].alive) { l.active = false; return; }
+        l.nutrient *= 0.997;
+        l.flow *= 0.85;
+
+        // Random traffic flow
+        if (l.active && Math.random() < radioTraffic * 0.02) {
+            l.flow += 0.3; l.nutrient = Math.min(1, l.nutrient + 0.03);
+        }
+
+        // Rhizomorph formation
+        if (l.nutrient > 0.7) { l.rhizoTicks++; } else { l.rhizoTicks = Math.max(0, l.rhizoTicks - 1); }
+        l.rhizomorph = l.rhizoTicks > 30;
+
+        // Tropism
+        if (l.flow > 0) l.tropismGain = Math.min(6, l.tropismGain + 0.1);
+        else l.tropismGain *= 0.97;
+
+        l.nutrient = Math.max(0.05, l.nutrient);
+    });
+
+    // Sleep scheduling
+    radioNodes.forEach(n => {
+        if (!n.alive) return;
+        const hasFlow = radioLinks.some(l => (l.a === n.id || l.b === n.id) && l.flow > 0.1);
+        if (hasFlow) { n.sleeping = false; n.power = Math.min(1, n.power + 0.05); }
+        else { n.power *= 0.99; if (n.power < 0.1) n.sleeping = true; }
+    });
+
+    radioTraffic *= 0.999; // gradual decay
+}
+
+function drawRadio() {
+    const ctx = radioCtx, W = radioCanvas.width, H = radioCanvas.height;
+    ctx.fillStyle = '#111'; ctx.fillRect(0, 0, W, H);
+
+    // Links
+    radioLinks.forEach(l => {
+        if (!l.active) return;
+        const a = radioNodes[l.a], b = radioNodes[l.b];
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+        if (l.rhizomorph) {
+            ctx.strokeStyle = `rgba(255,152,0,${0.5 + l.nutrient * 0.5})`;
+            ctx.lineWidth = 3 + l.nutrient * 4;
+        } else {
+            ctx.strokeStyle = `rgba(76,175,80,${0.2 + l.nutrient * 0.6})`;
+            ctx.lineWidth = 0.5 + l.nutrient * 3;
+        }
+        ctx.stroke();
+
+        // Tropism indicator
+        if (l.tropismGain > 1) {
+            const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+            ctx.beginPath(); ctx.arc(mx, my, l.tropismGain, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(156,39,176,${l.tropismGain / 12})`; ctx.fill();
+        }
+    });
+
+    // Nodes
+    radioNodes.forEach(n => {
+        if (!n.alive) {
+            ctx.beginPath(); ctx.arc(n.x, n.y, 6, 0, Math.PI * 2);
+            ctx.fillStyle = '#f44336'; ctx.fill();
+            ctx.beginPath(); ctx.moveTo(n.x - 4, n.y - 4); ctx.lineTo(n.x + 4, n.y + 4);
+            ctx.moveTo(n.x + 4, n.y - 4); ctx.lineTo(n.x - 4, n.y + 4);
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+            return;
+        }
+        const r = 5 + n.power * 6;
+        ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = n.sleeping ? '#333' : `rgba(33,150,243,${0.4 + n.power * 0.6})`;
+        ctx.fill();
+        ctx.strokeStyle = n.sleeping ? '#555' : '#fff';
+        ctx.lineWidth = 1; ctx.stroke();
+
+        // Power radius indicator
+        if (!n.sleeping && n.power > 0.3) {
+            ctx.beginPath(); ctx.arc(n.x, n.y, 20 + n.power * 40, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(33,150,243,${n.power * 0.1})`; ctx.lineWidth = 1; ctx.stroke();
+        }
+    });
+
+    const rhizoCount = radioLinks.filter(l => l.rhizomorph).length;
+    const sleepCount = radioNodes.filter(n => n.sleeping && n.alive).length;
+    ctx.fillStyle = '#555'; ctx.font = '12px monospace';
+    ctx.fillText(`Rhizomorphs: ${rhizoCount} | Sleeping: ${sleepCount} | Traffic: ${radioTraffic.toFixed(1)}`, 10, H - 10);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BIOLOGICAL SUBSTRATE VISUALIZATION
+// ═══════════════════════════════════════════════════════════════
+const bioCanvas = document.getElementById('bioCanvas');
+const bioCtx = bioCanvas.getContext('2d');
+let bioRunning = true;
+let bioJunctions = [], bioSegments = [], bioElectrodes = [];
+let bioTick = 0;
+
+function initBio() {
+    bioJunctions = []; bioSegments = []; bioElectrodes = [];
+    bioTick = 0;
+    const cx = 500, cy = 300;
+    bioJunctions.push({ x: cx, y: cy, type: 'branch', calcium: 0.05, alive: true, id: 0 });
+    for (let i = 0; i < 8; i++) {
+        const angle = (Math.PI * 2 * i / 8) + (Math.random() - 0.5) * 0.3;
+        const r = 30 + Math.random() * 20;
+        bioJunctions.push({
+            x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle),
+            type: 'tip', calcium: 0.05, alive: true, id: i + 1,
+            growDir: angle, growRate: 1 + Math.random()
+        });
+        bioSegments.push({ a: 0, b: i + 1, diameter: 4 + Math.random() * 2, alive: true, flow: 0, rhizomorph: false });
+    }
+    // Electrodes
+    for (let i = 0; i < 4; i++) {
+        const angle = Math.PI * 2 * i / 4 + Math.PI / 4;
+        bioElectrodes.push({ x: cx + 220 * Math.cos(angle), y: cy + 180 * Math.sin(angle), active: false, id: i });
+    }
+}
+
+function bioAction(action) {
+    if (action === 'run') bioRunning = true;
+    else if (action === 'pause') bioRunning = false;
+    else if (action === 'stimulate') {
+        const e = bioElectrodes[Math.floor(Math.random() * bioElectrodes.length)];
+        e.active = true;
+        // Calcium burst at nearest junction
+        let nearest = bioJunctions[0], minD = Infinity;
+        bioJunctions.forEach(j => { const d = dist(e, j); if (d < minD) { minD = d; nearest = j; } });
+        nearest.calcium = 5.0;
+        setTimeout(() => e.active = false, 2000);
+    }
+    else if (action === 'damage') {
+        // Kill segments near center
+        bioSegments.forEach(s => {
+            if (!s.alive) return;
+            const a = bioJunctions[s.a], b = bioJunctions[s.b];
+            const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+            if (dist({ x: mx, y: my }, { x: 500, y: 300 }) < 60) s.alive = false;
+        });
+    }
+    else if (action === 'reset') initBio();
+}
+
+function updateBio() {
+    if (!bioRunning) return;
+    bioTick++;
+
+    // Grow tips
+    const tips = bioJunctions.filter(j => j.type === 'tip' && j.alive);
+    tips.forEach(tip => {
+        const growDist = tip.growRate * 0.4;
+
+        // Chemotropism toward calcium
+        let bestCa = 0, bestAngle = tip.growDir;
+        bioJunctions.forEach(j => {
+            if (j.id === tip.id) return;
+            const d = dist(tip, j);
+            if (d < 100 && d > 1 && j.calcium > bestCa) {
+                bestCa = j.calcium;
+                bestAngle = Math.atan2(j.y - tip.y, j.x - tip.x);
+            }
+        });
+        if (bestCa > 0.1) tip.growDir += 0.15 * Math.sin(bestAngle - tip.growDir);
+
+        // Also attract toward electrodes
+        bioElectrodes.forEach(e => {
+            const d = dist(tip, e);
+            if (d < 150 && d > 1) {
+                const eAngle = Math.atan2(e.y - tip.y, e.x - tip.x);
+                tip.growDir += 0.03 * Math.sin(eAngle - tip.growDir);
+            }
+        });
+
+        tip.growDir += (Math.random() - 0.5) * 0.15;
+
+        const nx = tip.x + growDist * Math.cos(tip.growDir);
+        const ny = tip.y + growDist * Math.sin(tip.growDir);
+
+        // Bounds check
+        if (nx < 40 || nx > 960 || ny < 40 || ny > 560) return;
+
+        const newId = bioJunctions.length;
+        bioJunctions.push({
+            x: nx, y: ny, type: 'tip', calcium: 0.05, alive: true, id: newId,
+            growDir: tip.growDir + (Math.random() - 0.5) * 0.2,
+            growRate: tip.growRate * (0.95 + Math.random() * 0.1)
+        });
+        bioSegments.push({ a: tip.id, b: newId, diameter: 2 + Math.random(), alive: true, flow: 0, rhizomorph: false });
+
+        if (bioJunctions.filter(j => j.type === 'tip').length > 1) tip.type = 'branch';
+
+        // Branching
+        if (Math.random() < 0.015) {
+            const branchAngle = tip.growDir + (Math.random() < 0.5 ? 1 : -1) * (0.5 + Math.random() * 0.8);
+            const bid = bioJunctions.length;
+            bioJunctions.push({
+                x: tip.x + 5 * Math.cos(branchAngle),
+                y: tip.y + 5 * Math.sin(branchAngle),
+                type: 'tip', calcium: 0.05, alive: true, id: bid,
+                growDir: branchAngle, growRate: tip.growRate * 0.8
+            });
+            bioSegments.push({ a: tip.id, b: bid, diameter: 2, alive: true, flow: 0, rhizomorph: false });
+        }
+    });
+
+    // Anastomosis (fusion)
+    const jTips = bioJunctions.filter(j => j.type === 'tip' && j.alive);
+    jTips.forEach(tip => {
+        bioJunctions.forEach(other => {
+            if (other.id === tip.id || other.type === 'tip' || !other.alive) return;
+            if (dist(tip, other) < 8) {
+                const alreadyConnected = bioSegments.some(s =>
+                    s.alive && ((s.a === tip.id && s.b === other.id) || (s.b === tip.id && s.a === other.id)));
+                if (!alreadyConnected && Math.random() < 0.3) {
+                    bioSegments.push({ a: tip.id, b: other.id, diameter: 2, alive: true, flow: 0, rhizomorph: false });
+                    tip.type = 'anastomosis';
+                }
+            }
+        });
+    });
+
+    // Calcium diffusion
+    bioSegments.forEach(s => {
+        if (!s.alive) return;
+        const a = bioJunctions[s.a], b = bioJunctions[s.b];
+        if (!a || !b) return;
+        const grad = (a.calcium - b.calcium) * 0.05 * (s.diameter / 5);
+        a.calcium -= grad; b.calcium += grad;
+    });
+    bioJunctions.forEach(j => {
+        j.calcium *= 0.97;
+        j.calcium = Math.max(0.01, j.calcium);
+    });
+
+    // Update stats
+    const aliveSegs = bioSegments.filter(s => s.alive);
+    const aliveTips = bioJunctions.filter(j => j.type === 'tip' && j.alive);
+    const totalLen = aliveSegs.reduce((sum, s) => {
+        const a = bioJunctions[s.a], b = bioJunctions[s.b];
+        return sum + (a && b ? dist(a, b) : 0);
+    }, 0);
+    document.getElementById('bioSegs').textContent = aliveSegs.length;
+    document.getElementById('bioTips').textContent = aliveTips.length;
+    document.getElementById('bioLen').textContent = (totalLen * 0.1).toFixed(0);
+    document.getElementById('bioTime').textContent = (bioTick * 300).toLocaleString();
+}
+
+function drawBio() {
+    const ctx = bioCtx, W = bioCanvas.width, H = bioCanvas.height;
+    ctx.fillStyle = '#0a120a'; ctx.fillRect(0, 0, W, H);
+
+    // Segments
+    bioSegments.forEach(s => {
+        if (!s.alive) return;
+        const a = bioJunctions[s.a], b = bioJunctions[s.b];
+        if (!a || !b || !a.alive || !b.alive) return;
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+        const width = s.diameter * 0.4;
+        if (s.rhizomorph) {
+            ctx.strokeStyle = `rgba(255,152,0,0.8)`; ctx.lineWidth = width * 1.5;
+        } else {
+            const ca = Math.max(a.calcium, b.calcium);
+            if (ca > 0.5) {
+                ctx.strokeStyle = `rgba(156,39,176,${Math.min(ca / 3, 0.9)})`; ctx.lineWidth = width + 1;
+            } else {
+                ctx.strokeStyle = `rgba(76,175,80,${0.3 + s.diameter / 15})`; ctx.lineWidth = width;
+            }
+        }
+        ctx.stroke();
+    });
+
+    // Junctions
+    bioJunctions.forEach(j => {
+        if (!j.alive) return;
+        if (j.type === 'tip') {
+            ctx.beginPath(); ctx.arc(j.x, j.y, 3, 0, Math.PI * 2);
+            ctx.fillStyle = '#E91E63'; ctx.fill();
+        } else if (j.type === 'anastomosis') {
+            ctx.beginPath(); ctx.arc(j.x, j.y, 2.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#9C27B0'; ctx.fill();
+        }
+        // Calcium glow
+        if (j.calcium > 0.3) {
+            ctx.beginPath(); ctx.arc(j.x, j.y, 4 + j.calcium * 3, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(156,39,176,${Math.min(j.calcium / 5, 0.4)})`; ctx.fill();
+        }
+    });
+
+    // Electrodes
+    bioElectrodes.forEach(e => {
+        ctx.beginPath(); ctx.moveTo(e.x, e.y - 10); ctx.lineTo(e.x - 8, e.y + 6); ctx.lineTo(e.x + 8, e.y + 6); ctx.closePath();
+        ctx.fillStyle = e.active ? '#FF9800' : '#1565C0'; ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
+        if (e.active) {
+            ctx.beginPath(); ctx.arc(e.x, e.y, 15 + Math.sin(bioTick * 0.3) * 5, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255,152,0,0.5)'; ctx.lineWidth = 2; ctx.stroke();
+        }
+    });
+}
+
+// ─── Main Loop ───────────────────────────────────────────────
+initNetwork(); initRadio(); initBio();
+
+function mainLoop() {
+    updateNetwork(); drawNetwork();
+    updateRadio(); drawRadio();
+    updateBio(); drawBio();
+    requestAnimationFrame(mainLoop);
+}
+mainLoop();
+</script>
+</body>
+</html>

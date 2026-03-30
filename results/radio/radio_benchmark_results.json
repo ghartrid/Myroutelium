@@ -1,0 +1,428 @@
+{
+  "Topologies": {
+    "Grid 5x5 (25 nodes)": {
+      "myroutelium": {
+        "total_sent": 238,
+        "total_delivered": 43,
+        "total_dropped": 195,
+        "delivery_rate": 0.18067226890756302,
+        "avg_latency_ms": 0.8859931316035997,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 2.511627906976744,
+        "avg_throughput_mbps": 6.5887003929743315,
+        "avg_power_efficiency": 0.10619891215626802,
+        "avg_calcium_boost": 0.04550288550567961
+      },
+      "static_mesh": {
+        "total_sent": 238,
+        "total_delivered": 48,
+        "total_dropped": 190,
+        "delivery_rate": 0.20168067226890757,
+        "avg_latency_ms": 0.930351493827397,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.1875,
+        "avg_throughput_mbps": 9.264385953495571,
+        "avg_power_efficiency": 0.10636952956335644,
+        "avg_calcium_boost": 0
+      }
+    },
+    "Random (20 nodes)": {
+      "myroutelium": {
+        "total_sent": 244,
+        "total_delivered": 27,
+        "total_dropped": 217,
+        "delivery_rate": 0.11065573770491803,
+        "avg_latency_ms": 0.3354504902538331,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 1.3703703703703705,
+        "avg_throughput_mbps": 15.261734043521468,
+        "avg_power_efficiency": 0.14158972244641607,
+        "avg_calcium_boost": 0
+      },
+      "static_mesh": {
+        "total_sent": 244,
+        "total_delivered": 28,
+        "total_dropped": 216,
+        "delivery_rate": 0.11475409836065574,
+        "avg_latency_ms": 0.3871124260018141,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 1.6785714285714286,
+        "avg_throughput_mbps": 16.298808536457525,
+        "avg_power_efficiency": 0.14168404619701186,
+        "avg_calcium_boost": 0
+      }
+    },
+    "Clustered (4x5=20 nodes)": {
+      "myroutelium": {
+        "total_sent": 239,
+        "total_delivered": 108,
+        "total_dropped": 131,
+        "delivery_rate": 0.45188284518828453,
+        "avg_latency_ms": 0.32079830751269456,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 1.4166666666666667,
+        "avg_throughput_mbps": 18.00613110576699,
+        "avg_power_efficiency": 0.17777138185002253,
+        "avg_calcium_boost": 0.056365681693002406
+      },
+      "static_mesh": {
+        "total_sent": 239,
+        "total_delivered": 110,
+        "total_dropped": 129,
+        "delivery_rate": 0.4602510460251046,
+        "avg_latency_ms": 0.35779013234436413,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 1.7818181818181817,
+        "avg_throughput_mbps": 20.49268243967304,
+        "avg_power_efficiency": 0.1777979701685676,
+        "avg_calcium_boost": 0
+      }
+    },
+    "Line (8 nodes)": {
+      "myroutelium": {
+        "total_sent": 233,
+        "total_delivered": 7,
+        "total_dropped": 226,
+        "delivery_rate": 0.030042918454935622,
+        "avg_latency_ms": 0.3000000000000001,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 1.0,
+        "avg_throughput_mbps": 44.224740524743936,
+        "avg_power_efficiency": 0.16974467495182938,
+        "avg_calcium_boost": 0.05110700000000007
+      },
+      "static_mesh": {
+        "total_sent": 233,
+        "total_delivered": 7,
+        "total_dropped": 226,
+        "delivery_rate": 0.030042918454935622,
+        "avg_latency_ms": 0.3000000000000001,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 1.0,
+        "avg_throughput_mbps": 44.224740524743936,
+        "avg_power_efficiency": 0.16974467495182938,
+        "avg_calcium_boost": 0
+      }
+    },
+    "Disaster (20 nodes)": {
+      "myroutelium": {
+        "total_sent": 243,
+        "total_delivered": 23,
+        "total_dropped": 220,
+        "delivery_rate": 0.09465020576131687,
+        "avg_latency_ms": 0.22943092071668492,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 1.0434782608695652,
+        "avg_throughput_mbps": 28.68712891053242,
+        "avg_power_efficiency": 0.11425054563396081,
+        "avg_calcium_boost": 0.10639999999999994
+      },
+      "static_mesh": {
+        "total_sent": 243,
+        "total_delivered": 24,
+        "total_dropped": 219,
+        "delivery_rate": 0.09876543209876543,
+        "avg_latency_ms": 0.28877659669854044,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 1.4166666666666667,
+        "avg_throughput_mbps": 32.43926544585088,
+        "avg_power_efficiency": 0.11428198918538147,
+        "avg_calcium_boost": 0
+      }
+    }
+  },
+  "Traffic": {
+    "Uniform": {
+      "myroutelium": {
+        "total_sent": 239,
+        "total_delivered": 59,
+        "total_dropped": 180,
+        "delivery_rate": 0.24686192468619247,
+        "avg_latency_ms": 0.8436532425091019,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 2.4237288135593222,
+        "avg_throughput_mbps": 6.0518618226864795,
+        "avg_power_efficiency": 0.11924242668655721,
+        "avg_calcium_boost": 0.06331983330691267
+      },
+      "static_mesh": {
+        "total_sent": 239,
+        "total_delivered": 69,
+        "total_dropped": 170,
+        "delivery_rate": 0.28870292887029286,
+        "avg_latency_ms": 0.9403044767631934,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.130434782608696,
+        "avg_throughput_mbps": 10.413101007126182,
+        "avg_power_efficiency": 0.11957492665158119,
+        "avg_calcium_boost": 0
+      }
+    },
+    "Hotspot": {
+      "myroutelium": {
+        "total_sent": 750,
+        "total_delivered": 212,
+        "total_dropped": 538,
+        "delivery_rate": 0.2826666666666667,
+        "avg_latency_ms": 0.5217120127891269,
+        "avg_path_diversity": 0.9429012345679012,
+        "avg_hops": 1.6419753086419755,
+        "avg_throughput_mbps": 25.16488542250751,
+        "avg_power_efficiency": 0.12444077201028983,
+        "avg_calcium_boost": 0.07597534040647273
+      },
+      "static_mesh": {
+        "total_sent": 750,
+        "total_delivered": 213,
+        "total_dropped": 537,
+        "delivery_rate": 0.284,
+        "avg_latency_ms": 0.5517291705253277,
+        "avg_path_diversity": 0.9398148148148148,
+        "avg_hops": 1.8780864197530864,
+        "avg_throughput_mbps": 26.993486625523083,
+        "avg_power_efficiency": 0.12446348031287888,
+        "avg_calcium_boost": 0
+      }
+    },
+    "Bursty": {
+      "myroutelium": {
+        "total_sent": 235,
+        "total_delivered": 59,
+        "total_dropped": 176,
+        "delivery_rate": 0.251063829787234,
+        "avg_latency_ms": 0.8161376941952265,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 2.4972222222222222,
+        "avg_throughput_mbps": 8.378352178235708,
+        "avg_power_efficiency": 0.10935783824144073,
+        "avg_calcium_boost": 0.019704756054788934
+      },
+      "static_mesh": {
+        "total_sent": 235,
+        "total_delivered": 63,
+        "total_dropped": 172,
+        "delivery_rate": 0.2680851063829787,
+        "avg_latency_ms": 0.848976284734194,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 2.9813131313131316,
+        "avg_throughput_mbps": 10.62125719488555,
+        "avg_power_efficiency": 0.10950600429535244,
+        "avg_calcium_boost": 0
+      }
+    },
+    "Heavy load": {
+      "myroutelium": {
+        "total_sent": 970,
+        "total_delivered": 170,
+        "total_dropped": 800,
+        "delivery_rate": 0.17525773195876287,
+        "avg_latency_ms": 0.8730229852624496,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 2.610696517412935,
+        "avg_throughput_mbps": 9.118861668923508,
+        "avg_power_efficiency": 0.11368811609933915,
+        "avg_calcium_boost": 0.03530463362466497
+      },
+      "static_mesh": {
+        "total_sent": 970,
+        "total_delivered": 170,
+        "total_dropped": 800,
+        "delivery_rate": 0.17525773195876287,
+        "avg_latency_ms": 0.9626118822211506,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.235074626865672,
+        "avg_throughput_mbps": 13.135044567708427,
+        "avg_power_efficiency": 0.11368811609933915,
+        "avg_calcium_boost": 0
+      }
+    }
+  },
+  "Failures": {
+    "Random node failures": {
+      "myroutelium": {
+        "total_sent": 219,
+        "total_delivered": 49,
+        "total_dropped": 170,
+        "delivery_rate": 0.2237442922374429,
+        "avg_latency_ms": 0.724587276157061,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 2.2244897959183674,
+        "avg_throughput_mbps": 7.106073561644848,
+        "avg_power_efficiency": 0.17181885421634827,
+        "avg_calcium_boost": 0.0664143418411103
+      },
+      "static_mesh": {
+        "total_sent": 219,
+        "total_delivered": 54,
+        "total_dropped": 165,
+        "delivery_rate": 0.2465753424657534,
+        "avg_latency_ms": 0.8001694197910386,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 2.6481481481481484,
+        "avg_throughput_mbps": 9.428294436735925,
+        "avg_power_efficiency": 0.17192426312423664,
+        "avg_calcium_boost": 0
+      }
+    },
+    "Critical gateway failure": {
+      "myroutelium": {
+        "total_sent": 229,
+        "total_delivered": 47,
+        "total_dropped": 182,
+        "delivery_rate": 0.2052401746724891,
+        "avg_latency_ms": 0.8704462883942102,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 2.5531914893617023,
+        "avg_throughput_mbps": 6.840480615477295,
+        "avg_power_efficiency": 0.1178620144648879,
+        "avg_calcium_boost": 0.020935004894357914
+      },
+      "static_mesh": {
+        "total_sent": 229,
+        "total_delivered": 53,
+        "total_dropped": 176,
+        "delivery_rate": 0.2314410480349345,
+        "avg_latency_ms": 0.865251051864283,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.0,
+        "avg_throughput_mbps": 9.796513933775406,
+        "avg_power_efficiency": 0.118193526469397,
+        "avg_calcium_boost": 0
+      }
+    }
+  },
+  "Power": {
+    "Low traffic": {
+      "myroutelium": {
+        "total_sent": 70,
+        "total_delivered": 16,
+        "total_dropped": 54,
+        "delivery_rate": 0.22857142857142856,
+        "avg_latency_ms": 0.7088688302017128,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 2.0625,
+        "avg_throughput_mbps": 8.226784490932738,
+        "avg_power_efficiency": 0.13628461307400452,
+        "avg_calcium_boost": 0.039199999999999874
+      },
+      "static_mesh": {
+        "total_sent": 70,
+        "total_delivered": 25,
+        "total_dropped": 45,
+        "delivery_rate": 0.35714285714285715,
+        "avg_latency_ms": 0.8119060164689452,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 2.72,
+        "avg_throughput_mbps": 9.723341386766133,
+        "avg_power_efficiency": 0.1370428124407815,
+        "avg_calcium_boost": 0
+      }
+    },
+    "Medium traffic": {
+      "myroutelium": {
+        "total_sent": 191,
+        "total_delivered": 29,
+        "total_dropped": 162,
+        "delivery_rate": 0.1518324607329843,
+        "avg_latency_ms": 1.1049884460542267,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.103448275862069,
+        "avg_throughput_mbps": 4.868727829554767,
+        "avg_power_efficiency": 0.1272432156835494,
+        "avg_calcium_boost": 0.06200284999999992
+      },
+      "static_mesh": {
+        "total_sent": 191,
+        "total_delivered": 30,
+        "total_dropped": 161,
+        "delivery_rate": 0.15706806282722513,
+        "avg_latency_ms": 0.958962563621966,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.2333333333333334,
+        "avg_throughput_mbps": 7.484084235611311,
+        "avg_power_efficiency": 0.12736648787506447,
+        "avg_calcium_boost": 0
+      }
+    },
+    "High traffic": {
+      "myroutelium": {
+        "total_sent": 576,
+        "total_delivered": 155,
+        "total_dropped": 421,
+        "delivery_rate": 0.2690972222222222,
+        "avg_latency_ms": 0.7870272592232896,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 2.3425925925925926,
+        "avg_throughput_mbps": 9.57200554511102,
+        "avg_power_efficiency": 0.15789339670408947,
+        "avg_calcium_boost": 0.03615293039944144
+      },
+      "static_mesh": {
+        "total_sent": 576,
+        "total_delivered": 155,
+        "total_dropped": 421,
+        "delivery_rate": 0.2690972222222222,
+        "avg_latency_ms": 0.794854327528177,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 2.6319444444444446,
+        "avg_throughput_mbps": 12.601764888525283,
+        "avg_power_efficiency": 0.15789339670408947,
+        "avg_calcium_boost": 0
+      }
+    },
+    "Very high traffic": {
+      "myroutelium": {
+        "total_sent": 1156,
+        "total_delivered": 265,
+        "total_dropped": 891,
+        "delivery_rate": 0.2292387543252595,
+        "avg_latency_ms": 0.7720101592219207,
+        "avg_path_diversity": 0.9972222222222222,
+        "avg_hops": 2.347685185185185,
+        "avg_throughput_mbps": 9.090349531225565,
+        "avg_power_efficiency": 0.15309651208345165,
+        "avg_calcium_boost": 0.04547730025645145
+      },
+      "static_mesh": {
+        "total_sent": 1156,
+        "total_delivered": 265,
+        "total_dropped": 891,
+        "delivery_rate": 0.2292387543252595,
+        "avg_latency_ms": 0.8690745363967938,
+        "avg_path_diversity": 0.9972222222222222,
+        "avg_hops": 3.0305555555555554,
+        "avg_throughput_mbps": 12.746368796391963,
+        "avg_power_efficiency": 0.15309651208345165,
+        "avg_calcium_boost": 0
+      }
+    }
+  },
+  "IoT": {
+    "IoT (3gw + 25 sensors)": {
+      "myroutelium": {
+        "total_sent": 357,
+        "total_delivered": 130,
+        "total_dropped": 227,
+        "delivery_rate": 0.3641456582633053,
+        "avg_latency_ms": 0.7726586627896179,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.2045454545454546,
+        "avg_throughput_mbps": 3.6270581735717857,
+        "avg_power_efficiency": 0.2133124900391653,
+        "avg_calcium_boost": 0.041204293079746775
+      },
+      "static_mesh": {
+        "total_sent": 357,
+        "total_delivered": 130,
+        "total_dropped": 227,
+        "delivery_rate": 0.3641456582633053,
+        "avg_latency_ms": 0.6995663599572997,
+        "avg_path_diversity": 0.9954545454545455,
+        "avg_hops": 2.9318181818181817,
+        "avg_throughput_mbps": 4.491648704424199,
+        "avg_power_efficiency": 0.21331752134066073,
+        "avg_calcium_boost": 0
+      }
+    }
+  }
+}

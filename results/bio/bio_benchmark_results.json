@@ -1,0 +1,119 @@
+{
+  "natural_growth": {
+    "tick": 300,
+    "bio_time_s": 90000.0,
+    "junctions": 2084,
+    "segments": 2073,
+    "tips": 6,
+    "rhizomorphs": 0,
+    "fusions": 0,
+    "new_growth": 7,
+    "spikes_propagated": 0,
+    "avg_diameter": 2.884474674384961,
+    "avg_calcium": 0.05,
+    "total_length_mm": 541.2916815418796,
+    "avg_bandwidth": 0.33408370925229397
+  },
+  "electrode_routing": {
+    "success_rate": 1.0,
+    "avg_path_length": 22.0
+  },
+  "guided_growth": {
+    "tick": 400,
+    "bio_time_s": 120000.0,
+    "junctions": 215,
+    "segments": 210,
+    "tips": 0,
+    "rhizomorphs": 33,
+    "fusions": 0,
+    "new_growth": 0,
+    "spikes_propagated": 39,
+    "avg_diameter": 3.0882219551605457,
+    "avg_calcium": 3.563325808041676,
+    "total_length_mm": 59.869573249204706,
+    "avg_bandwidth": 0.41250005813529483
+  },
+  "environment": {
+    "Optimal (25\u00b0C, 80% moist)": {
+      "tick": 200,
+      "bio_time_s": 60000.0,
+      "junctions": 1642,
+      "segments": 1639,
+      "tips": 8,
+      "rhizomorphs": 0,
+      "fusions": 0,
+      "new_growth": 8,
+      "spikes_propagated": 0,
+      "avg_diameter": 2.9247882855399707,
+      "avg_calcium": 0.05,
+      "total_length_mm": 431.50000000000006,
+      "avg_bandwidth": 0.34361872634533425
+    },
+    "Cold (10\u00b0C)": {
+      "tick": 200,
+      "bio_time_s": 60000.0,
+      "junctions": 1306,
+      "segments": 1306,
+      "tips": 5,
+      "rhizomorphs": 0,
+      "fusions": 0,
+      "new_growth": 5,
+      "spikes_propagated": 0,
+      "avg_diameter": 2.9272557427258885,
+      "avg_calcium": 0.049999999999999996,
+      "total_length_mm": 162.61023840147598,
+      "avg_bandwidth": 0.3440995006431872
+    },
+    "Hot (38\u00b0C)": {
+      "tick": 200,
+      "bio_time_s": 60000.0,
+      "junctions": 1623,
+      "segments": 1619,
+      "tips": 8,
+      "rhizomorphs": 0,
+      "fusions": 0,
+      "new_growth": 8,
+      "spikes_propagated": 0,
+      "avg_diameter": 2.9362124768375613,
+      "avg_calcium": 0.05,
+      "total_length_mm": 252.49999999999997,
+      "avg_bandwidth": 0.3458870243854248
+    },
+    "Dry (20% moist)": {
+      "tick": 200,
+      "bio_time_s": 60000.0,
+      "junctions": 35,
+      "segments": 42,
+      "tips": 0,
+      "rhizomorphs": 0,
+      "fusions": 0,
+      "new_growth": 0,
+      "spikes_propagated": 0,
+      "avg_diameter": 3.082904761904774,
+      "avg_calcium": 0.05,
+      "total_length_mm": 16.574322189801155,
+      "avg_bandwidth": 0.4144803847619079
+    },
+    "Acidic (pH 4)": {
+      "tick": 200,
+      "bio_time_s": 60000.0,
+      "junctions": 1255,
+      "segments": 1257,
+      "tips": 4,
+      "rhizomorphs": 0,
+      "fusions": 0,
+      "new_growth": 4,
+      "spikes_propagated": 0,
+      "avg_diameter": 2.9230198886237155,
+      "avg_calcium": 0.05,
+      "total_length_mm": 194.18604773313618,
+      "avg_bandwidth": 0.34326511579952457
+    }
+  },
+  "damage_recovery": {
+    "pre_damage": 1489,
+    "killed": 6,
+    "post_recovery": 2771,
+    "recovery_pct": 21466.666666666664
+  }
+}

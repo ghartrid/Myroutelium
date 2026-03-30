@@ -1,0 +1,518 @@
+{
+  "Topologies": {
+    "4x4 Grid": {
+      "myroutelium": {
+        "total_sent": 281,
+        "total_delivered": 281,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 18.11387900355872,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.622775800711744,
+        "avg_calcium_boost": 0.049613416375034254
+      },
+      "dijkstra": {
+        "total_sent": 281,
+        "total_delivered": 281,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 12.95373665480427,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 2.590747330960854
+      }
+    },
+    "6x6 Grid": {
+      "myroutelium": {
+        "total_sent": 293,
+        "total_delivered": 292,
+        "total_dropped": 1,
+        "delivery_rate": 0.9965870307167235,
+        "avg_latency": 34.657534246575345,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 6.931506849315069,
+        "avg_calcium_boost": 0.028665700503228298
+      },
+      "dijkstra": {
+        "total_sent": 293,
+        "total_delivered": 293,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 20.358361774744026,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 4.071672354948806
+      }
+    },
+    "Ring (12 nodes)": {
+      "myroutelium": {
+        "total_sent": 277,
+        "total_delivered": 277,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 17.292418772563177,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.4584837545126352,
+        "avg_calcium_boost": 0.07198974779160386
+      },
+      "dijkstra": {
+        "total_sent": 277,
+        "total_delivered": 277,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 15.5956678700361,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.11913357400722
+      }
+    },
+    "Random (20 nodes)": {
+      "myroutelium": {
+        "total_sent": 289,
+        "total_delivered": 289,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 34.060044405968995,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.3494809688581313,
+        "avg_calcium_boost": 0.04772309413254494
+      },
+      "dijkstra": {
+        "total_sent": 289,
+        "total_delivered": 289,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 12.007064755441089,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 2.577854671280277
+      }
+    },
+    "Internet-like (35 nodes)": {
+      "myroutelium": {
+        "total_sent": 291,
+        "total_delivered": 284,
+        "total_dropped": 7,
+        "delivery_rate": 0.9759450171821306,
+        "avg_latency": 26.362676056338028,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 5.253521126760563,
+        "avg_calcium_boost": 0.023192355998241567
+      },
+      "dijkstra": {
+        "total_sent": 291,
+        "total_delivered": 291,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 19.903780068728523,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.0996563573883162
+      }
+    }
+  },
+  "Traffic": {
+    "Uniform": {
+      "myroutelium": {
+        "total_sent": 289,
+        "total_delivered": 289,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 25.259515570934255,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 5.051903114186851,
+        "avg_calcium_boost": 0.06487392139751381
+      },
+      "dijkstra": {
+        "total_sent": 289,
+        "total_delivered": 289,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 16.124567474048444,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.2249134948096887
+      }
+    },
+    "Hotspot (center)": {
+      "myroutelium": {
+        "total_sent": 900,
+        "total_delivered": 900,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 15.255555555555556,
+        "avg_path_diversity": 0.9566666666666667,
+        "avg_hops": 3.051111111111111,
+        "avg_calcium_boost": 0.12006689461199063
+      },
+      "dijkstra": {
+        "total_sent": 900,
+        "total_delivered": 900,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 12.6,
+        "avg_path_diversity": 0.951111111111111,
+        "avg_hops": 2.52
+      }
+    },
+    "Bursty": {
+      "myroutelium": {
+        "total_sent": 331,
+        "total_delivered": 331,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 25.267658730158733,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 5.053531746031746,
+        "avg_calcium_boost": 0.023753999993306168
+      },
+      "dijkstra": {
+        "total_sent": 331,
+        "total_delivered": 331,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 16.44265873015873,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.288531746031746
+      }
+    },
+    "Heavy load": {
+      "myroutelium": {
+        "total_sent": 1432,
+        "total_delivered": 1432,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 23.649166666666666,
+        "avg_path_diversity": 0.9971666666666666,
+        "avg_hops": 4.729833333333334,
+        "avg_calcium_boost": 0.1269449210741486
+      },
+      "dijkstra": {
+        "total_sent": 1432,
+        "total_delivered": 1432,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 16.7375,
+        "avg_path_diversity": 0.9951666666666668,
+        "avg_hops": 3.3475
+      }
+    }
+  },
+  "Failures": {
+    "Random link failures": {
+      "myroutelium": {
+        "total_sent": 294,
+        "total_delivered": 294,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 26.122448979591837,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 5.224489795918367,
+        "avg_calcium_boost": 0.03864475956864612
+      },
+      "dijkstra": {
+        "total_sent": 294,
+        "total_delivered": 294,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 16.802721088435373,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.360544217687075
+      }
+    },
+    "Critical node failure": {
+      "myroutelium": {
+        "total_sent": 281,
+        "total_delivered": 281,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 25.516014234875446,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 5.103202846975089,
+        "avg_calcium_boost": 0.059289112288997504
+      },
+      "dijkstra": {
+        "total_sent": 281,
+        "total_delivered": 281,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 16.298932384341636,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.2597864768683276
+      }
+    },
+    "Cascading failures": {
+      "myroutelium": {
+        "total_sent": 439,
+        "total_delivered": 439,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 24.807073954983924,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 4.961414790996785,
+        "avg_calcium_boost": 0.03965954285300469
+      },
+      "dijkstra": {
+        "total_sent": 439,
+        "total_delivered": 439,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 17.106109324758844,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.4212218649517685
+      }
+    }
+  },
+  "Scalability": {
+    "3x3 (9 nodes)": {
+      "myroutelium": {
+        "total_sent": 84,
+        "total_delivered": 84,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 12.55952380952381,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 2.511904761904762,
+        "avg_calcium_boost": 0.05434051833748654
+      },
+      "dijkstra": {
+        "total_sent": 84,
+        "total_delivered": 84,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 10.535714285714286,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 2.107142857142857
+      },
+      "wall_time_sec": 0.03
+    },
+    "5x5 (25 nodes)": {
+      "myroutelium": {
+        "total_sent": 97,
+        "total_delivered": 95,
+        "total_dropped": 2,
+        "delivery_rate": 0.979381443298969,
+        "avg_latency": 26.63157894736842,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 5.326315789473684,
+        "avg_calcium_boost": 0.03409193990975448
+      },
+      "dijkstra": {
+        "total_sent": 97,
+        "total_delivered": 97,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 17.216494845360824,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.443298969072165
+      },
+      "wall_time_sec": 0.09
+    },
+    "7x7 (49 nodes)": {
+      "myroutelium": {
+        "total_sent": 96,
+        "total_delivered": 96,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 41.458333333333336,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 8.291666666666666
+      },
+      "dijkstra": {
+        "total_sent": 96,
+        "total_delivered": 96,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 23.75,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 4.75
+      },
+      "wall_time_sec": 0.3
+    },
+    "10x10 (100 nodes)": {
+      "myroutelium": {
+        "total_sent": 98,
+        "total_delivered": 97,
+        "total_dropped": 1,
+        "delivery_rate": 0.9897959183673469,
+        "avg_latency": 64.3298969072165,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 12.8659793814433
+      },
+      "dijkstra": {
+        "total_sent": 98,
+        "total_delivered": 98,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 34.59183673469388,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 6.918367346938775
+      },
+      "wall_time_sec": 8.79
+    }
+  },
+  "Parameters": {
+    "Default (\u03b1=0.1, \u03b4=0.01, \u03c4=0.5)": {
+      "myroutelium": {
+        "total_sent": 289,
+        "total_delivered": 289,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 27.647058823529413,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 5.529411764705882,
+        "avg_calcium_boost": 0.030211130257021032
+      },
+      "dijkstra": {
+        "total_sent": 289,
+        "total_delivered": 289,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 17.1280276816609,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.42560553633218
+      }
+    },
+    "Fast learning (\u03b1=0.3)": {
+      "myroutelium": {
+        "total_sent": 289,
+        "total_delivered": 289,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 26.33217993079585,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 5.26643598615917,
+        "avg_calcium_boost": 0.14775380414819578
+      },
+      "dijkstra": {
+        "total_sent": 289,
+        "total_delivered": 289,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 17.1280276816609,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.42560553633218
+      }
+    },
+    "Fast decay (\u03b4=0.05)": {
+      "myroutelium": {
+        "total_sent": 288,
+        "total_delivered": 75,
+        "total_dropped": 213,
+        "delivery_rate": 0.2604166666666667,
+        "avg_latency": 28.933333333333334,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 5.786666666666667,
+        "avg_calcium_boost": 0.017178618501420235
+      },
+      "dijkstra": {
+        "total_sent": 288,
+        "total_delivered": 144,
+        "total_dropped": 144,
+        "delivery_rate": 0.5,
+        "avg_latency": 18.26388888888889,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.6527777777777777
+      }
+    },
+    "High exploration (\u03c4=2.0)": {
+      "myroutelium": {
+        "total_sent": 289,
+        "total_delivered": 289,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 28.75432525951557,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 5.750865051903114,
+        "avg_calcium_boost": 0.02852394689858239
+      },
+      "dijkstra": {
+        "total_sent": 289,
+        "total_delivered": 289,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 17.1280276816609,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.42560553633218
+      }
+    },
+    "Low exploration (\u03c4=0.1)": {
+      "myroutelium": {
+        "total_sent": 289,
+        "total_delivered": 289,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 26.33217993079585,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 5.26643598615917,
+        "avg_calcium_boost": 0.03091578564068324
+      },
+      "dijkstra": {
+        "total_sent": 289,
+        "total_delivered": 289,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 17.1280276816609,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.42560553633218
+      }
+    },
+    "Heavy calcium (ca=0.8)": {
+      "myroutelium": {
+        "total_sent": 289,
+        "total_delivered": 289,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 27.647058823529413,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 5.529411764705882,
+        "avg_calcium_boost": 0.02987284656074605
+      },
+      "dijkstra": {
+        "total_sent": 289,
+        "total_delivered": 289,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 17.1280276816609,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.42560553633218
+      }
+    },
+    "No calcium (ca=0.0)": {
+      "myroutelium": {
+        "total_sent": 289,
+        "total_delivered": 289,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 27.647058823529413,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 5.529411764705882,
+        "avg_calcium_boost": 0.030532612728033846
+      },
+      "dijkstra": {
+        "total_sent": 289,
+        "total_delivered": 289,
+        "total_dropped": 0,
+        "delivery_rate": 1.0,
+        "avg_latency": 17.1280276816609,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.42560553633218
+      }
+    },
+    "Aggressive (\u03b1=0.3, \u03b4=0.05, \u03c4=0.1)": {
+      "myroutelium": {
+        "total_sent": 291,
+        "total_delivered": 143,
+        "total_dropped": 148,
+        "delivery_rate": 0.49140893470790376,
+        "avg_latency": 27.377622377622377,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 5.475524475524476,
+        "avg_calcium_boost": 0.03063294182025806
+      },
+      "dijkstra": {
+        "total_sent": 291,
+        "total_delivered": 206,
+        "total_dropped": 85,
+        "delivery_rate": 0.7079037800687286,
+        "avg_latency": 19.466019417475728,
+        "avg_path_diversity": 1.0,
+        "avg_hops": 3.8932038834951457
+      }
+    }
+  }
+}

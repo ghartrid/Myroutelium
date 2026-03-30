@@ -121,6 +121,7 @@ canvas { display: block; margin: 0 auto; border-radius: 8px; background: #111; b
     <div class="tab" onclick="showPanel('radio')">Physical Layer</div>
     <div class="tab" onclick="showPanel('bio')">Bio Substrate</div>
     <div class="tab" onclick="showPanel('transmit')">Text Transmission</div>
+    <div class="tab" onclick="showPanel('imgtx')">Image Transmission</div>
 </div>
 
 <!-- ════════ Architecture Panel ════════ -->
@@ -298,13 +299,76 @@ canvas { display: block; margin: 0 auto; border-radius: 8px; background: #111; b
     </div>
 </div>
 
+<!-- ════════ Image Transmission Panel ════════ -->
+<div id="imgtx" class="panel">
+    <div style="display:flex; gap:16px; max-width:1100px; margin:0 auto;">
+        <!-- Left: Source image + encoding -->
+        <div style="flex:0 0 180px; text-align:center;">
+            <div class="info" style="margin:0 0 8px;">
+                <h3>Source</h3>
+                <canvas id="imgSrc" width="128" height="128" style="border:1px solid #4CAF50; border-radius:4px; image-rendering:pixelated; width:128px; height:128px;"></canvas>
+            </div>
+            <div class="info" style="margin:0; font-size:0.8em;">
+                <span class="stat" id="imgTxProgress">0</span>% transmitted<br>
+                <span id="imgTxPixels" style="color:#888;">0 / 0 pixels</span>
+            </div>
+        </div>
+        <!-- Center: Network routing visualization -->
+        <div style="flex:1;">
+            <canvas id="imgNetCanvas" width="600" height="400" style="border:1px solid #222; border-radius:8px; width:100%;"></canvas>
+        </div>
+        <!-- Right: Received image -->
+        <div style="flex:0 0 180px; text-align:center;">
+            <div class="info" style="margin:0 0 8px;">
+                <h3>Received</h3>
+                <canvas id="imgDst" width="128" height="128" style="border:1px solid #2196F3; border-radius:4px; image-rendering:pixelated; width:128px; height:128px;"></canvas>
+            </div>
+            <div class="info" style="margin:0; font-size:0.8em;">
+                <span class="stat" id="imgRxProgress">0</span>% received<br>
+                <span id="imgBitrate" style="color:#888;">0 bps bio-rate</span>
+            </div>
+        </div>
+    </div>
+    <div class="controls" style="margin-top:12px;">
+        <select id="imgSelect" style="padding:8px 12px; background:#111; border:1px solid #4CAF50; border-radius:4px; color:#4CAF50; font-size:0.9em;">
+            <option value="smiley">Smiley Face</option>
+            <option value="arrow">Arrow</option>
+            <option value="heart">Heart</option>
+            <option value="wave">Sine Wave</option>
+            <option value="grid">Grid Pattern</option>
+            <option value="text">Text "Hi"</option>
+            <option value="custom">Draw Custom</option>
+        </select>
+        <button class="btn" onclick="imgStart()">Transmit Image</button>
+        <button class="btn orange" onclick="imgInjectFault()">Inject Noise</button>
+        <button class="btn red" onclick="imgKillPath()">Break Path</button>
+        <button class="btn" onclick="imgReset()">Reset</button>
+    </div>
+    <div class="legend" style="margin-top:8px;">
+        <div class="legend-item"><div class="legend-dot" style="background:#4CAF50"></div> Pixel data (spike train)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#FF9800"></div> Rhizomorph trunk</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#9C27B0"></div> Ca2+ routing signal</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f44336"></div> Error / noise</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#2196F3"></div> Reconstructed pixel</div>
+    </div>
+    <div class="info">
+        <h3>Image Routing Through Living Mycelium</h3>
+        <p>
+            Each pixel is encoded as an <span class="stat">8-bit grayscale</span> value, converted to a spike train,
+            and routed through the mycelial network. The network uses <strong style="color:#FF9800">multi-path routing</strong> —
+            different pixel rows take different biological paths simultaneously. Rhizomorph trunk links carry more data.
+            Ca2+ waves coordinate which paths are available. Watch the image reconstruct pixel-by-pixel at the destination electrode.
+        </p>
+    </div>
+</div>
+
 <script>
 // ─── Tab Navigation ──────────────────────────────────────────
 function showPanel(id) {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.getElementById(id).classList.add('active');
-    const tabMap = { arch: 'Architecture', network: 'Network', radio: 'Physical', bio: 'Bio', transmit: 'Text' };
+    const tabMap = { arch: 'Architecture', network: 'Network', radio: 'Physical', bio: 'Bio', transmit: 'Text T', imgtx: 'Image' };
     document.querySelectorAll('.tab').forEach(t => {
         if (t.textContent.includes(tabMap[id] || '')) t.classList.add('active');
     });
@@ -1142,6 +1206,462 @@ function drawTransmit() {
 
 txBuildNetwork();
 
+// ═══════════════════════════════════════════════════════════════
+// IMAGE TRANSMISSION VISUALIZATION
+// ═══════════════════════════════════════════════════════════════
+const imgSrcCanvas = document.getElementById('imgSrc');
+const imgDstCanvas = document.getElementById('imgDst');
+const imgNetCanvas = document.getElementById('imgNetCanvas');
+const imgSrcCtx = imgSrcCanvas.getContext('2d');
+const imgDstCtx = imgDstCanvas.getContext('2d');
+const imgNetCtx = imgNetCanvas.getContext('2d');
+
+const IMG_SIZE = 16; // 16x16 pixel image (256 pixels, 2048 bits)
+
+let imgState = {
+    srcPixels: [],      // flat array of grayscale values 0-255
+    dstPixels: [],      // received pixels
+    sending: false,
+    pixelIndex: 0,      // current pixel being sent
+    bitInPixel: 0,      // current bit within pixel (0-7)
+    packets: [],        // {pixelIdx, row, bits[], progress, pathIdx, color, noisy}
+    network: { nodes: [], links: [] },
+    paths: [],          // precomputed paths from src to dst
+    tick: 0,
+    noiseActive: false,
+    brokenPath: -1,
+    drawMode: false,
+};
+
+function imgGenerateImage(type) {
+    const px = new Array(IMG_SIZE * IMG_SIZE).fill(0);
+
+    if (type === 'smiley') {
+        for (let y = 0; y < IMG_SIZE; y++)
+            for (let x = 0; x < IMG_SIZE; x++) {
+                const cx = x - 7.5, cy = y - 7.5, r = Math.sqrt(cx*cx + cy*cy);
+                // Face outline
+                if (r > 5.5 && r < 7) px[y*IMG_SIZE+x] = 200;
+                // Eyes
+                if ((Math.abs(cx+3) < 1.2 && Math.abs(cy+2) < 1.5) || (Math.abs(cx-3) < 1.2 && Math.abs(cy+2) < 1.5))
+                    px[y*IMG_SIZE+x] = 255;
+                // Mouth
+                if (cy > 1 && cy < 4 && r > 3 && r < 5.5 && cx > -4 && cx < 4)
+                    px[y*IMG_SIZE+x] = 220;
+            }
+    } else if (type === 'arrow') {
+        for (let y = 0; y < IMG_SIZE; y++)
+            for (let x = 0; x < IMG_SIZE; x++) {
+                if (x > 3 && x < 12 && Math.abs(y - 8) < 2) px[y*IMG_SIZE+x] = 255; // shaft
+                if (x > 8 && Math.abs(y - 8) < (x - 8)) px[y*IMG_SIZE+x] = 200; // head
+            }
+    } else if (type === 'heart') {
+        for (let y = 0; y < IMG_SIZE; y++)
+            for (let x = 0; x < IMG_SIZE; x++) {
+                const nx = (x - 8) / 6, ny = (y - 9) / 6;
+                const v = (nx*nx + ny*ny - 1); const heart = v*v*v - nx*nx*ny*ny*ny;
+                if (heart < 0) px[y*IMG_SIZE+x] = Math.min(255, Math.floor((-heart) * 800));
+            }
+    } else if (type === 'wave') {
+        for (let y = 0; y < IMG_SIZE; y++)
+            for (let x = 0; x < IMG_SIZE; x++) {
+                px[y*IMG_SIZE+x] = Math.floor(127 + 127 * Math.sin(x * 0.8 + y * 0.3));
+            }
+    } else if (type === 'grid') {
+        for (let y = 0; y < IMG_SIZE; y++)
+            for (let x = 0; x < IMG_SIZE; x++) {
+                px[y*IMG_SIZE+x] = ((x + y) % 2 === 0) ? 255 : 40;
+            }
+    } else if (type === 'text') {
+        // Simple "Hi" in pixels
+        const hi = [
+            '10001000',
+            '10001000',
+            '11111000',
+            '10001000',
+            '10001000',
+            '00000000',
+            '01110000',
+            '00100000',
+            '00100000',
+            '00100000',
+            '01110000',
+        ];
+        for (let y = 0; y < hi.length && y + 2 < IMG_SIZE; y++)
+            for (let x = 0; x < hi[y].length && x + 4 < IMG_SIZE; x++)
+                if (hi[y][x] === '1') px[(y+2)*IMG_SIZE+(x+4)] = 255;
+    }
+
+    return px;
+}
+
+function imgBuildNetwork() {
+    const nodes = [], links = [];
+    const W = 600, H = 400;
+    const srcX = 50, dstX = 550, midX = 300;
+
+    // Source node
+    nodes.push({ x: srcX, y: H/2, type: 'src', alive: true, calcium: 0 });
+
+    // Destination node
+    nodes.push({ x: dstX, y: H/2, type: 'dst', alive: true, calcium: 0 });
+
+    // Create multiple paths (like parallel hyphae)
+    const nPaths = 5;
+    const pathNodes = [];
+
+    for (let p = 0; p < nPaths; p++) {
+        const yBase = 60 + p * ((H - 120) / (nPaths - 1));
+        const nodesInPath = 4 + Math.floor(Math.random() * 3);
+        const thisPath = [];
+
+        for (let n = 0; n < nodesInPath; n++) {
+            const t = (n + 1) / (nodesInPath + 1);
+            const x = lerp(srcX + 40, dstX - 40, t) + (Math.random() - 0.5) * 30;
+            const y = yBase + (Math.random() - 0.5) * 30 + Math.sin(t * Math.PI) * 15;
+            const id = nodes.length;
+            nodes.push({ x, y, type: 'relay', alive: true, calcium: 0 });
+            thisPath.push(id);
+        }
+        pathNodes.push(thisPath);
+
+        // Connect: src -> path nodes -> dst
+        const fullPath = [0, ...thisPath, 1];
+        for (let i = 0; i < fullPath.length - 1; i++) {
+            const isRhizo = p === Math.floor(nPaths / 2); // middle path is rhizomorph
+            links.push({
+                a: fullPath[i], b: fullPath[i+1],
+                diameter: isRhizo ? 6 + Math.random() * 2 : 2 + Math.random() * 3,
+                flow: 0, calcium: 0, rhizomorph: isRhizo, alive: true, pathIdx: p
+            });
+        }
+    }
+
+    // Cross-connections between paths (anastomosis)
+    for (let p = 0; p < nPaths - 1; p++) {
+        const a = pathNodes[p], b = pathNodes[p + 1];
+        const minLen = Math.min(a.length, b.length);
+        for (let i = 0; i < minLen; i++) {
+            if (Math.random() < 0.4) {
+                links.push({
+                    a: a[i], b: b[i],
+                    diameter: 1.5 + Math.random(), flow: 0, calcium: 0,
+                    rhizomorph: false, alive: true, pathIdx: -1
+                });
+            }
+        }
+    }
+
+    imgState.network = { nodes, links };
+
+    // Precompute path indices for routing
+    imgState.paths = [];
+    for (let p = 0; p < nPaths; p++) {
+        imgState.paths.push([0, ...pathNodes[p], 1]);
+    }
+}
+
+function imgRenderSource() {
+    const ctx = imgSrcCtx;
+    const scale = 128 / IMG_SIZE;
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 128, 128);
+    for (let y = 0; y < IMG_SIZE; y++)
+        for (let x = 0; x < IMG_SIZE; x++) {
+            const v = imgState.srcPixels[y * IMG_SIZE + x];
+            ctx.fillStyle = `rgb(${v},${v},${v})`;
+            ctx.fillRect(x * scale, y * scale, scale, scale);
+        }
+}
+
+function imgRenderDest() {
+    const ctx = imgDstCtx;
+    const scale = 128 / IMG_SIZE;
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 128, 128);
+    for (let y = 0; y < IMG_SIZE; y++)
+        for (let x = 0; x < IMG_SIZE; x++) {
+            const v = imgState.dstPixels[y * IMG_SIZE + x];
+            if (v >= 0) {
+                ctx.fillStyle = `rgb(${v},${v},${v})`;
+                ctx.fillRect(x * scale, y * scale, scale, scale);
+            }
+        }
+}
+
+function imgStart() {
+    const type = document.getElementById('imgSelect').value;
+    if (type === 'custom') {
+        imgState.drawMode = true;
+        imgState.srcPixels = new Array(IMG_SIZE * IMG_SIZE).fill(0);
+        imgRenderSource();
+        return;
+    }
+    imgState.drawMode = false;
+    imgState.srcPixels = imgGenerateImage(type);
+    imgState.dstPixels = new Array(IMG_SIZE * IMG_SIZE).fill(-1);
+    imgState.pixelIndex = 0;
+    imgState.bitInPixel = 0;
+    imgState.packets = [];
+    imgState.sending = true;
+    imgState.tick = 0;
+    imgState.noiseActive = false;
+    imgState.brokenPath = -1;
+    imgBuildNetwork();
+    imgRenderSource();
+    imgDstCtx.fillStyle = '#000'; imgDstCtx.fillRect(0, 0, 128, 128);
+}
+
+function imgInjectFault() { imgState.noiseActive = true; setTimeout(() => imgState.noiseActive = false, 3000); }
+
+function imgKillPath() {
+    const alive = imgState.paths.filter((_, i) => i !== imgState.brokenPath);
+    if (alive.length > 1) {
+        imgState.brokenPath = Math.floor(Math.random() * imgState.paths.length);
+        // Kill links on that path
+        imgState.network.links.forEach(l => {
+            if (l.pathIdx === imgState.brokenPath) l.alive = false;
+        });
+    }
+}
+
+function imgReset() {
+    imgState.sending = false;
+    imgState.packets = [];
+    imgState.srcPixels = [];
+    imgState.dstPixels = [];
+    imgState.drawMode = false;
+    imgSrcCtx.fillStyle = '#000'; imgSrcCtx.fillRect(0, 0, 128, 128);
+    imgDstCtx.fillStyle = '#000'; imgDstCtx.fillRect(0, 0, 128, 128);
+    imgBuildNetwork();
+}
+
+// Custom drawing on source canvas
+imgSrcCanvas.addEventListener('mousedown', (e) => {
+    if (!imgState.drawMode) return;
+    const rect = imgSrcCanvas.getBoundingClientRect();
+    const scale = IMG_SIZE / 128;
+    const draw = (ev) => {
+        const x = Math.floor((ev.clientX - rect.left) * scale);
+        const y = Math.floor((ev.clientY - rect.top) * scale);
+        if (x >= 0 && x < IMG_SIZE && y >= 0 && y < IMG_SIZE) {
+            imgState.srcPixels[y * IMG_SIZE + x] = 255;
+            // Also set neighbors slightly
+            for (let dy = -1; dy <= 1; dy++)
+                for (let dx = -1; dx <= 1; dx++) {
+                    const nx = x+dx, ny = y+dy;
+                    if (nx >= 0 && nx < IMG_SIZE && ny >= 0 && ny < IMG_SIZE)
+                        imgState.srcPixels[ny*IMG_SIZE+nx] = Math.max(imgState.srcPixels[ny*IMG_SIZE+nx], 180);
+                }
+            imgRenderSource();
+        }
+    };
+    draw(e);
+    const move = (ev) => draw(ev);
+    const up = () => {
+        window.removeEventListener('mousemove', move);
+        window.removeEventListener('mouseup', up);
+        // After drawing, prepare for transmission
+        imgState.drawMode = false;
+        imgState.dstPixels = new Array(IMG_SIZE * IMG_SIZE).fill(-1);
+        imgState.pixelIndex = 0;
+        imgState.packets = [];
+        imgState.sending = true;
+        imgState.tick = 0;
+        imgBuildNetwork();
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+});
+
+function updateImage() {
+    if (!imgState.sending) return;
+    imgState.tick++;
+
+    const PIXELS_PER_FRAME = 2; // transmit multiple pixels per frame for speed
+
+    // Launch new pixel packets
+    for (let p = 0; p < PIXELS_PER_FRAME; p++) {
+        if (imgState.pixelIndex >= imgState.srcPixels.length) break;
+
+        const pixIdx = imgState.pixelIndex;
+        const row = Math.floor(pixIdx / IMG_SIZE);
+        const value = imgState.srcPixels[pixIdx];
+
+        // Route different rows through different paths
+        let pathIdx = row % imgState.paths.length;
+        if (pathIdx === imgState.brokenPath) pathIdx = (pathIdx + 1) % imgState.paths.length;
+
+        imgState.packets.push({
+            pixelIdx: pixIdx,
+            row: row,
+            value: value,
+            progress: 0,
+            pathIdx: pathIdx,
+            noisy: imgState.noiseActive && Math.random() < 0.3,
+            alive: true,
+        });
+
+        imgState.pixelIndex++;
+    }
+
+    // Move packets through network
+    imgState.packets.forEach(pkt => {
+        if (!pkt.alive) return;
+        pkt.progress += 0.03 + Math.random() * 0.01;
+
+        // Activate calcium along the path
+        const path = imgState.paths[pkt.pathIdx];
+        if (path) {
+            const nodeIdx = Math.floor(pkt.progress * (path.length - 1));
+            if (nodeIdx < path.length) {
+                const node = imgState.network.nodes[path[nodeIdx]];
+                if (node) node.calcium = Math.max(node.calcium, pkt.value / 255);
+            }
+            // Light up links
+            imgState.network.links.forEach(l => {
+                if (l.pathIdx === pkt.pathIdx && l.alive) l.flow = Math.max(l.flow, 0.5);
+            });
+        }
+
+        // Arrived
+        if (pkt.progress >= 1.0) {
+            pkt.alive = false;
+            let received = pkt.value;
+            if (pkt.noisy) received = Math.max(0, Math.min(255, received + Math.floor((Math.random() - 0.5) * 100)));
+            imgState.dstPixels[pkt.pixelIdx] = received;
+            imgRenderDest();
+        }
+    });
+
+    imgState.packets = imgState.packets.filter(p => p.alive);
+
+    // Decay
+    imgState.network.nodes.forEach(n => { n.calcium *= 0.9; });
+    imgState.network.links.forEach(l => { l.flow *= 0.85; l.calcium *= 0.9; });
+
+    // Update stats
+    const totalPx = imgState.srcPixels.length;
+    const rxPx = imgState.dstPixels.filter(v => v >= 0).length;
+    const pct = totalPx > 0 ? Math.floor(rxPx / totalPx * 100) : 0;
+    document.getElementById('imgTxProgress').textContent = totalPx > 0 ? Math.floor(imgState.pixelIndex / totalPx * 100) : 0;
+    document.getElementById('imgRxProgress').textContent = pct;
+    document.getElementById('imgTxPixels').textContent = `${imgState.pixelIndex} / ${totalPx} pixels`;
+    document.getElementById('imgBitrate').textContent = `${Math.floor(rxPx * 8 / Math.max(imgState.tick, 1) * 60)} bps bio-rate`;
+
+    // Done check
+    if (imgState.pixelIndex >= totalPx && imgState.packets.length === 0) {
+        imgState.sending = false;
+    }
+}
+
+function drawImage() {
+    const ctx = imgNetCtx, W = 600, H = 400;
+    ctx.fillStyle = '#0a120a'; ctx.fillRect(0, 0, W, H);
+
+    const { nodes, links } = imgState.network;
+
+    // Draw links
+    links.forEach(l => {
+        if (!l.alive) {
+            const a = nodes[l.a], b = nodes[l.b];
+            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+            ctx.strokeStyle = 'rgba(244,67,54,0.3)'; ctx.lineWidth = 1;
+            ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+            return;
+        }
+        const a = nodes[l.a], b = nodes[l.b];
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+
+        if (l.rhizomorph) {
+            ctx.strokeStyle = `rgba(255,152,0,${0.3 + l.flow * 0.7})`;
+            ctx.lineWidth = l.diameter * 0.6 + l.flow * 3;
+        } else if (l.flow > 0.1) {
+            ctx.strokeStyle = `rgba(76,175,80,${0.2 + l.flow * 0.6})`;
+            ctx.lineWidth = l.diameter * 0.4 + l.flow * 2;
+        } else {
+            ctx.strokeStyle = 'rgba(76,175,80,0.15)';
+            ctx.lineWidth = l.diameter * 0.3;
+        }
+        ctx.stroke();
+    });
+
+    // Draw nodes
+    nodes.forEach(n => {
+        const r = n.type === 'src' || n.type === 'dst' ? 8 : 3;
+        // Calcium glow
+        if (n.calcium > 0.1) {
+            ctx.beginPath(); ctx.arc(n.x, n.y, r + 6 + n.calcium * 8, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(156,39,176,${Math.min(n.calcium * 0.4, 0.5)})`;
+            ctx.fill();
+        }
+        ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+        if (n.type === 'src') ctx.fillStyle = '#FF9800';
+        else if (n.type === 'dst') ctx.fillStyle = '#2196F3';
+        else ctx.fillStyle = n.alive ? '#4CAF50' : '#f44336';
+        ctx.fill();
+        if (n.type === 'src' || n.type === 'dst') {
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+        }
+    });
+
+    // Draw packets in flight
+    imgState.packets.forEach(pkt => {
+        if (!pkt.alive) return;
+        const path = imgState.paths[pkt.pathIdx];
+        if (!path) return;
+
+        const totalNodes = path.length;
+        const floatIdx = pkt.progress * (totalNodes - 1);
+        const idx = Math.floor(floatIdx);
+        const frac = floatIdx - idx;
+
+        if (idx >= totalNodes - 1) return;
+        const a = nodes[path[idx]], b = nodes[path[idx + 1]];
+        if (!a || !b) return;
+
+        const px = lerp(a.x, b.x, frac);
+        const py = lerp(a.y, b.y, frac);
+
+        // Pixel color as the packet color
+        const v = pkt.value;
+        const color = pkt.noisy ? `rgba(244,67,54,0.9)` : `rgba(${v},${v},${v},0.9)`;
+
+        ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2);
+        ctx.fillStyle = color; ctx.fill();
+        // Glow
+        ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI * 2);
+        ctx.fillStyle = pkt.noisy ? 'rgba(244,67,54,0.15)' : `rgba(76,175,80,0.15)`;
+        ctx.fill();
+    });
+
+    // Labels
+    ctx.fillStyle = '#FF9800'; ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('SOURCE', nodes[0].x, nodes[0].y - 14);
+    ctx.fillStyle = '#2196F3';
+    ctx.fillText('DESTINATION', nodes[1].x, nodes[1].y - 14);
+
+    // Path labels
+    ctx.font = '9px monospace'; ctx.textAlign = 'left';
+    for (let p = 0; p < imgState.paths.length; p++) {
+        const path = imgState.paths[p];
+        const midNode = nodes[path[Math.floor(path.length / 2)]];
+        if (midNode) {
+            ctx.fillStyle = p === imgState.brokenPath ? '#f44336' :
+                            imgState.network.links.some(l => l.pathIdx === p && l.rhizomorph) ? '#FF9800' : '#555';
+            const label = p === imgState.brokenPath ? 'BROKEN' :
+                          imgState.network.links.some(l => l.pathIdx === p && l.rhizomorph) ? `Path ${p} (rhizo)` : `Path ${p}`;
+            ctx.fillText(label, midNode.x + 8, midNode.y - 4);
+        }
+    }
+
+    // Noise indicator
+    if (imgState.noiseActive) {
+        ctx.fillStyle = 'rgba(244,67,54,0.8)'; ctx.font = 'bold 14px monospace'; ctx.textAlign = 'center';
+        ctx.fillText('NOISE INJECTED', W / 2, 25);
+    }
+}
+
+imgBuildNetwork();
+
 // ─── Main Loop ───────────────────────────────────────────────
 initNetwork(); initRadio(); initBio();
 
@@ -1150,6 +1670,7 @@ function mainLoop() {
     updateRadio(); drawRadio();
     updateBio(); drawBio();
     updateTransmit(); drawTransmit();
+    updateImage(); drawImage();
     requestAnimationFrame(mainLoop);
 }
 mainLoop();
